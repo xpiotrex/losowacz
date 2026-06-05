@@ -22,132 +22,115 @@
             height: 100dvh;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            overflow: hidden;
-            overscroll-behavior: none;
             background-color: #000000;
+            overflow: hidden;
             touch-action: none;
         }
 
-        #glass-box {
+        /* ARCHITEKTURA WARSTWOWA (Omija bugi iOS)
+           Wszystkie warstwy mają ten sam rozmiar i nakładają się na siebie 
+        */
+        .layer {
             position: absolute;
-            top: max(env(safe-area-inset-top), 8px);
-            bottom: max(env(safe-area-inset-bottom), 8px);
-            left: max(env(safe-area-inset-left), 8px);
-            right: max(env(safe-area-inset-right), 8px);
-            border-radius: 32px;
-            background: rgba(10, 10, 12, 0.6);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            transform: translateZ(0);
-            
-            /* NAPRAWA BŁĘDU: Solidna biała maska zmusza iOS do zaokrąglania elementów wewnątrz, nie chowając ich! */
-            -webkit-mask-image: -webkit-linear-gradient(white, white);
-            mask-image: linear-gradient(white, white);
+            top: max(env(safe-area-inset-top), 12px);
+            bottom: max(env(safe-area-inset-bottom), 12px);
+            left: max(env(safe-area-inset-left), 12px);
+            right: max(env(safe-area-inset-right), 12px);
+            border-radius: 36px;
+            pointer-events: none; /* Domyślnie przepuszczają dotyk do warstwy Canvas */
         }
 
-        /* CZARNY RDZEŃ EKRANU */
-        .dark-core {
-            position: absolute;
-            inset: 0;
-            background: #000000;
-            -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 65%, rgba(0,0,0,0.1) 90%, rgba(0,0,0,0) 100%);
-            mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 65%, rgba(0,0,0,0.1) 90%, rgba(0,0,0,0) 100%);
-            z-index: 2;
-            pointer-events: none;
+        /* WARSTWA 1: Tło ambientowe (Plazma) */
+        #layer-ambient {
+            overflow: hidden; /* Przycina plazmę do zaokrąglonych rogów */
         }
-
-        /* TŁO AMBIENTOWE (Widoczne tylko na obrzeżach ramki) */
         .ambient-glow {
             position: absolute;
             border-radius: 50%;
-            filter: blur(60px); 
-            opacity: 0.6; 
-            z-index: 0;
-            pointer-events: none;
+            filter: blur(50px); 
+            opacity: 0.75; 
             animation: float 10s infinite alternate ease-in-out;
         }
-
         .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #FF007F; animation-delay: 0s; }
         .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #00FFF0; animation-delay: -3s; }
         .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #7B2CBF; animation-delay: -6s; }
 
         @keyframes float {
             0% { transform: scale(0.8) translate(0, 0); opacity: 0.3; }
-            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.7; }
+            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.8; }
             100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.4; }
         }
 
-        /* DYNAMICZNIE KRĄŻĄCE ŚWIATŁO PO RAMCE BOXA */
-        .rotating-border-container {
-            position: absolute;
-            inset: 0;
-            border-radius: 32px;
-            padding: 2.5px; /* Grubość ramki */
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            z-index: 1000;
-            pointer-events: none;
-            overflow: hidden; 
+        /* WARSTWA 2: Szkło (Tylko rozmywa to, co pod nim) */
+        #layer-glass {
+            background: rgba(12, 12, 15, 0.4);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
         }
 
-        .rotating-border-gradient {
+        /* WARSTWA 3: Czarny rdzeń (Przyciemnia środek ekranu, uwydatnia kolory boków) */
+        #layer-dark-core {
+            /* Idealny gradient bez użycia maskowania! */
+            background: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0) 100%);
+        }
+
+        /* WARSTWA 4: Animowana ramka obrysowa */
+        #layer-border {
+            padding: 2.5px; /* Grubość świetlnej ramki */
+            /* Puste wnęrze wycięte maską (wspierane w 100% na Safari) */
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: destination-out;
+            mask-composite: exclude;
+            overflow: hidden;
+        }
+        .rotating-gradient {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
             background: conic-gradient(
                 from 0deg,
                 transparent 0%,
-                rgba(0, 255, 240, 0.2) 15%,
-                rgba(0, 255, 240, 1) 25%,
-                rgba(255, 0, 127, 1) 35%,
-                rgba(255, 0, 127, 0.2) 45%,
-                transparent 50%
+                rgba(0, 255, 240, 1) 20%,
+                rgba(255, 0, 127, 1) 40%,
+                transparent 60%
             );
             animation: spin-border 3s linear infinite;
         }
+        @keyframes spin-border { 100% { transform: rotate(360deg); } }
 
-        @keyframes spin-border {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Delikatna statyczna krawędź ze szkła */
-        .glass-edge-overlay {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            pointer-events: none;
+        /* WARSTWA 5: Stała, szklana krawędź boczna (nadaje refleks ekranowi) */
+        #layer-glass-edge {
             border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
-            z-index: 999;
+            box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.05);
         }
 
-        /* BAZA MGŁY PALCÓW - Przejścia na zmiennych unikają przeskakiwania! */
+        /* WARSTWA 6: Pole gry (Łapie dotyk, renderuje mgły graczy) */
+        #layer-canvas {
+            pointer-events: auto; /* Jako jedyna warstwa łapie dotyk! */
+            overflow: hidden; /* Przycina mgły do zaokrąglenia ekranu */
+            transform: translateZ(0); /* Wymuszenie przycinania dla Safari */
+        }
+
+        /* BAZA MGŁY PALCÓW (Wszystkie zmiany oparte o płynne transitions!) */
         .finger-fog {
             position: absolute;
-            width: 350px; 
-            height: 350px;
+            width: 350px; height: 350px;
             pointer-events: none;
             z-index: 10;
             
-            /* Startowe zmienne dla animacji CSS */
+            /* Startowe zmienne (Niewidoczne) */
             transform: translate(-50%, -50%) scale(0.1);
             opacity: 0;
             filter: brightness(1) blur(0px);
             
-            /* To transition sprawia, że powrót do startu odliczania jest bardzo miękki */
+            /* Przejścia zapewniają miękki powrót w przypadku zabrania palca w trakcie */
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
                         opacity 0.6s ease, 
                         filter 0.6s ease;
         }
 
         .fog-visual {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.85) 0%, rgba(var(--glow-rgb), 0.25) 45%, rgba(var(--glow-rgb), 0) 80%);
+            width: 100%; height: 100%; border-radius: 50%;
+            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.9) 0%, rgba(var(--glow-rgb), 0.25) 45%, rgba(0,0,0,0) 80%);
             mix-blend-mode: screen;
             animation: subtle-breathe 1.5s infinite alternate ease-in-out;
         }
@@ -157,7 +140,7 @@
             100% { transform: scale(1.05); }
         }
 
-        /* STANY ODLICZANIA (Zmieniamy tylko wartości, żeby transition zrobiło płynną robotę) */
+        /* STANY ODLICZANIA */
         .finger-fog.idle { transform: translate(-50%, -50%) scale(0.6); opacity: 0.6; }
         .finger-fog.stage-1 { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
         .finger-fog.stage-2 { transform: translate(-50%, -50%) scale(1.0); opacity: 0.9; }
@@ -166,58 +149,54 @@
         /* NARODZINY ZWYCIĘZCY */
         .finger-fog.winner {
             transform: translate(-50%, -50%) scale(2.8);
-            opacity: 1;
-            filter: brightness(1.5);
-            z-index: 100;
+            opacity: 1; filter: brightness(1.6); z-index: 100;
             transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1), opacity 3s ease, filter 3s ease;
         }
-        
         .finger-fog.winner .fog-visual {
-            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(var(--glow-rgb), 0) 80%);
-            animation: subtle-breathe 4s infinite alternate ease-in-out;
+            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.2) 50%, rgba(0,0,0,0) 80%);
+            animation: winner-breathe 4s infinite alternate ease-in-out;
         }
+        @keyframes winner-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
 
         /* ROZPROSZENIE (Puszczenie palca przegranego gracza) */
         .finger-fog.dispersing {
             transform: translate(-50%, -50%) scale(2.5) !important;
-            opacity: 0 !important;
-            filter: brightness(0.5) blur(30px) !important;
+            opacity: 0 !important; filter: brightness(0.5) blur(30px) !important;
             transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease !important;
         }
 
-        /* ZALANIE OKNA (Gdy Zwycięzca puści palec) 
-           Światło błyskawicznie pęcznieje na cały ekran i wygasa przez 3 sekundy.
-        */
+        /* POTĘŻNE ZALANIE OKNA (Gdy Zwycięzca puści palec) */
         .finger-fog.winner.dispersing {
+            /* Obłok uderza do x15 skali, obejmując absolutnie cały ekran */
             transform: translate(-50%, -50%) scale(15) !important; 
-            opacity: 0 !important;
-            filter: brightness(2) blur(60px) !important;
-            /* Scale rośnie szybko, a światło gaśnie bardzo majestatycznie */
+            opacity: 0 !important; filter: brightness(2.5) blur(30px) !important;
+            /* Rośnie i gaśnie w iście kinowy sposób */
             transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), 
-                        filter 3s ease, 
-                        opacity 3s ease-in-out 1s !important; 
+                        filter 3.5s ease, 
+                        opacity 3.5s ease-in-out 1s !important; 
         }
     </style>
 </head>
 <body>
 
-    <div id="glass-box">
+    <div class="layer" id="layer-ambient">
         <div class="ambient-glow glow-1"></div>
         <div class="ambient-glow glow-2"></div>
         <div class="ambient-glow glow-3"></div>
-        <div class="dark-core"></div>
-        
-        <div id="game-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5;"></div>
-        
-        <div class="rotating-border-container">
-            <div class="rotating-border-gradient"></div>
-        </div>
-        <div class="glass-edge-overlay"></div>
     </div>
+    
+    <div class="layer" id="layer-glass"></div>
+    <div class="layer" id="layer-dark-core"></div>
+    
+    <div class="layer" id="layer-border">
+        <div class="rotating-gradient"></div>
+    </div>
+    <div class="layer" id="layer-glass-edge"></div>
+
+    <div class="layer" id="layer-canvas"></div>
 
     <script>
-        const canvas = document.getElementById('game-canvas');
-        const glassBox = document.getElementById('glass-box');
+        const canvas = document.getElementById('layer-canvas');
         
         let activeTouches = {};
         let countdownTimer = null;
@@ -236,7 +215,7 @@
         ];
 
         function getRelativePos(clientX, clientY) {
-            const rect = glassBox.getBoundingClientRect();
+            const rect = canvas.getBoundingClientRect();
             return {
                 x: clientX - rect.left,
                 y: clientY - rect.top
@@ -244,17 +223,14 @@
         }
 
         function render() {
-            // Sprzątanie po oderwanych palcach
             const existingFogs = document.querySelectorAll('.finger-fog');
             existingFogs.forEach(fog => {
                 const touchId = fog.getAttribute('data-id');
-                // Jeśli tego ID nie ma już na ekranie (i to nie jest zwycięzca na scenie)
                 if (!activeTouches[touchId]) {
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
-                        fog.removeAttribute('data-id'); // Odpinamy go od logiki!
-                        // Czekamy na koniec animacji znikania, zanim fizycznie skasujemy HTML
-                        setTimeout(() => fog.remove(), 4000); 
+                        fog.removeAttribute('data-id'); 
+                        setTimeout(() => fog.remove(), 4500); // Czeka, aż wygasną nawet opóźnione efekty
                     }
                 }
             });
@@ -262,12 +238,11 @@
             if (isFinished) return;
 
             Object.keys(activeTouches).forEach(id => {
-                // Bezpieczne szukanie elementu
                 let fog = document.getElementById(`touch-${id}`);
                 if (!fog) {
                     fog = document.createElement('div');
                     fog.id = `touch-${id}`;
-                    fog.className = 'finger-fog idle';
+                    fog.className = 'finger-fog'; // Na start bez klasy, aby odpalić płynną animację
                     fog.setAttribute('data-id', id);
                     fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
                     
@@ -276,6 +251,10 @@
                     fog.appendChild(visual);
                     
                     canvas.appendChild(fog);
+                    
+                    // Wymuszenie reflow - konieczne aby przejście (transition) zadziałało z opóźnieniem
+                    void fog.offsetWidth;
+                    fog.classList.add('idle');
                 }
                 fog.style.left = activeTouches[id].x + 'px';
                 fog.style.top = activeTouches[id].y + 'px';
@@ -307,8 +286,8 @@
             if (!isFinished) {
                 const fogs = document.querySelectorAll('.finger-fog');
                 fogs.forEach(fog => {
-                    // Cofa klasy do "idle", co powoduje płynne skurczenie dzięki CSS transition!
                     if (!fog.classList.contains('dispersing')) {
+                        // Cofnięcie klasy do 'idle' - dzięki CSS transition obłok płynnie się kurczy
                         fog.className = 'finger-fog idle';
                     }
                 });
@@ -404,8 +383,7 @@
                 delete activeTouches[touchId];
             }
 
-            // KLUCZOWE: Odpal render przed stopCountdown, aby uciekające palce (i zwycięzca!) dostały klasę 'dispersing'
-            render();
+            render(); // Wymusza nadanie klasy ulatniania się nawet zwycięzcy
 
             const remainingCount = Object.keys(activeTouches).length;
 
@@ -419,674 +397,10 @@
             }
         }
 
-        document.addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: false });
-        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-    </script>
-</body>
-</html>            border: 1.5px solid rgba(255, 255, 255, 0.25);
-            box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.08);
-            z-index: 1000;
-            mix-blend-mode: overlay; 
-        }
-
-        .ambient-glow {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px); 
-            opacity: 0.7; 
-            z-index: 0;
-            pointer-events: none;
-            animation: float 10s infinite alternate ease-in-out;
-        }
-
-        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #FF007F; animation-delay: 0s; }
-        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #00FFF0; animation-delay: -3s; }
-        .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #7B2CBF; animation-delay: -6s; }
-
-        @keyframes float {
-            0% { transform: scale(0.8) translate(0, 0); opacity: 0.3; }
-            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.7; }
-            100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.4; }
-        }
-
-        /* GŁÓWNY KONTENER MGŁY
-           Zamiast keyframes dla poszczególnych faz, używamy zmiennych CSS.
-           Dzięki temu przejścia (np. powrót z fazy 3 do idle przy dodaniu palca) są w 100% płynne.
-        */
-        .finger-fog {
-            position: absolute;
-            width: 350px; 
-            height: 350px;
-            pointer-events: none;
-            z-index: 10;
-            
-            /* Domyślne wartości zmiennych (stan ukryty) */
-            --fog-scale: 0.1;
-            --fog-opacity: 0;
-            --fog-bright: 1;
-            --fog-blur: 0px;
-
-            /* Renderowanie na podstawie zmiennych */
-            transform: translate(-50%, -50%) scale(var(--fog-scale));
-            opacity: var(--fog-opacity);
-            filter: brightness(var(--fog-bright)) blur(var(--fog-blur));
-            
-            /* Płynne reagowanie na zmiany faz */
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
-                        opacity 0.6s ease, 
-                        filter 0.6s ease;
-        }
-
-        /* Wewnętrzny element odpowiada TYLKO za pulsowanie - nie gryzie się to ze zmianą rozmiaru! */
-        .fog-visual {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.85) 0%, rgba(var(--glow-rgb), 0.25) 45%, rgba(var(--glow-rgb), 0) 80%);
-            mix-blend-mode: screen;
-            animation: subtle-breathe 1.5s infinite alternate ease-in-out;
-        }
-
-        @keyframes subtle-breathe {
-            0% { transform: scale(0.95); }
-            100% { transform: scale(1.05); }
-        }
-
-        /* STANY GRY (Nadpisują tylko zmienne CSS) */
-        .finger-fog.idle {
-            --fog-scale: 0.6;
-            --fog-opacity: 0.5;
-        }
-        .finger-fog.stage-1 {
-            --fog-scale: 0.8;
-            --fog-opacity: 0.7;
-        }
-        .finger-fog.stage-2 {
-            --fog-scale: 1.0;
-            --fog-opacity: 0.9;
-        }
-        .finger-fog.stage-3 {
-            --fog-scale: 1.2;
-            --fog-opacity: 1;
-            --fog-bright: 1.2;
-        }
-
-        /* EPOKA ZWYCIĘZCY: Płynne wejście przez 3 sekundy */
-        .finger-fog.winner {
-            --fog-scale: 2.8;
-            --fog-opacity: 1;
-            --fog-bright: 1.5;
-            z-index: 100;
-            transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1), opacity 3s ease, filter 3s ease;
-        }
-        
-        .finger-fog.winner .fog-visual {
-            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(var(--glow-rgb), 0) 80%);
-            animation: subtle-breathe 4s infinite alternate ease-in-out;
-        }
-
-        /* ROZPROSZENIE ZWYKŁEGO GRACZA */
-        .finger-fog.dispersing {
-            --fog-scale: 2.5;
-            --fog-opacity: 0;
-            --fog-bright: 0.5;
-            --fog-blur: 30px;
-            transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease;
-        }
-
-        /* POTĘŻNE OBLANIE OKNA (Gdy Zwycięzca puści palec) 
-           Mgła skaluje się 20-krotnie rozlewając kolor po panelu, po czym powoli gaśnie.
-        */
-        .finger-fog.winner.dispersing {
-            --fog-scale: 20; 
-            --fog-opacity: 0;
-            --fog-bright: 2;
-            --fog-blur: 50px;
-            /* Rozlanie światła zajmuje 2s, ale ciemność zaczyna wchodzić dopiero po 1.5s i trwa 3s */
-            transition: transform 2s cubic-bezier(0.5, 0, 0.8, 1), 
-                        filter 3s ease,
-                        opacity 3s ease-in-out 1.5s !important; 
-        }
-    </style>
-</head>
-<body>
-
-    <div id="glass-box">
-        <div class="ambient-glow glow-1"></div>
-        <div class="ambient-glow glow-2"></div>
-        <div class="ambient-glow glow-3"></div>
-        <div class="dark-core"></div>
-        
-        <div id="game-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5;"></div>
-        <div class="glass-edge-overlay"></div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('game-canvas');
-        const glassBox = document.getElementById('glass-box');
-        
-        let activeTouches = {};
-        let countdownTimer = null;
-        let isFinished = false;
-        let winnerId = null;
-        let currentStage = 0;
-
-        const colorsRGB = [
-            '0, 255, 240',   
-            '255, 0, 127',   
-            '123, 44, 191',  
-            '57, 255, 20',   
-            '255, 107, 0',   
-            '255, 215, 0',   
-            '0, 229, 255'    
-        ];
-
-        function getRelativePos(clientX, clientY) {
-            const rect = glassBox.getBoundingClientRect();
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
-
-        function render() {
-            const existingFogs = document.querySelectorAll('.finger-fog');
-            existingFogs.forEach(fog => {
-                // Jesli to byl palec gracza, ktorego juz nie ma na ekranie:
-                if (!activeTouches[fog.dataset.touchId] && fog.dataset.touchId !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.classList.add('dispersing');
-                        // KLUCZOWE ZABEZPIECZENIE: Usuwamy id powiązania, zeby przy ponownym dotyku system nie kradł tej samej animacji
-                        fog.removeAttribute('data-touch-id'); 
-                        setTimeout(() => fog.remove(), 3000); 
-                    }
-                }
-            });
-
-            if (isFinished) return;
-
-            Object.keys(activeTouches).forEach(id => {
-                let fog = document.querySelector(`.finger-fog[data-touch-id="${id}"]`);
-                if (!fog) {
-                    fog = document.createElement('div');
-                    fog.className = 'finger-fog idle';
-                    fog.dataset.touchId = id; // Używamy dataset zamiast id HTML
-                    fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
-                    
-                    // Wewnętrzny obłok do pulsowania
-                    const visual = document.createElement('div');
-                    visual.className = 'fog-visual';
-                    fog.appendChild(visual);
-                    
-                    canvas.appendChild(fog);
-                }
-                fog.style.left = activeTouches[id].x + 'px';
-                fog.style.top = activeTouches[id].y + 'px';
-            });
-        }
-
-        function startCountdown() {
-            stopCountdown();
-            currentStage = 1;
-            applyStageClasses();
-            
-            countdownTimer = setInterval(() => {
-                currentStage++;
-                if (currentStage <= 3) {
-                    applyStageClasses();
-                } else {
-                    stopCountdown();
-                    drawWinner();
-                }
-            }, 1000);
-        }
-
-        function stopCountdown() {
-            if (countdownTimer) {
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            }
-            currentStage = 0;
-            if (!isFinished) {
-                const fogs = document.querySelectorAll('.finger-fog');
-                fogs.forEach(fog => {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.className = 'finger-fog idle';
-                    }
-                });
-            }
-        }
-
-        function applyStageClasses() {
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
-                if (fog.dataset.touchId !== winnerId && !fog.classList.contains('dispersing')) {
-                    fog.className = `finger-fog stage-${currentStage}`;
-                }
-            });
-            if (navigator.vibrate) navigator.vibrate(20);
-        }
-
-        function drawWinner() {
-            const ids = Object.keys(activeTouches);
-            if (ids.length < 2) return;
-
-            isFinished = true;
-            const randomIndex = Math.floor(Math.random() * ids.length);
-            winnerId = ids[randomIndex];
-
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
-                if (fog.dataset.touchId !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.classList.add('dispersing');
-                        fog.removeAttribute('data-touch-id');
-                        setTimeout(() => fog.remove(), 3000);
-                    }
-                } else {
-                    fog.classList.remove('idle', 'stage-1', 'stage-2', 'stage-3');
-                    fog.classList.add('winner');
-                    if (navigator.vibrate) navigator.vibrate([400]); 
-                }
-            });
-        }
-
-        function handleTouchStart(e) {
-            e.preventDefault();
-            if (isFinished) return;
-
-            let anyNewFinger = false;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                if (!activeTouches[touch.identifier]) {
-                    const chosenColor = colorsRGB[Math.abs(touch.identifier) % colorsRGB.length];
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    
-                    activeTouches[touch.identifier] = {
-                        x: pos.x,
-                        y: pos.y,
-                        colorRGB: chosenColor
-                    };
-                    anyNewFinger = true;
-                }
-            }
-            
-            render();
-
-            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) {
-                startCountdown();
-            }
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (isFinished) return;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                if (activeTouches[touch.identifier]) {
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    activeTouches[touch.identifier].x = pos.x;
-                    activeTouches[touch.identifier].y = pos.y;
-                }
-            }
-            render();
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                delete activeTouches[touch.identifier];
-            }
-
-            const remainingCount = Object.keys(activeTouches).length;
-
-            if (remainingCount === 0) {
-                // Jeśli wszyscy puszczą palce, resetujemy grę
-                isFinished = false;
-                winnerId = null;
-                activeTouches = {};
-                stopCountdown();
-            } else if (remainingCount < 2 && !isFinished) {
-                // Przerwanie losowania - powrót do fazy idle jest teraz w 100% płynny!
-                stopCountdown();
-            }
-
-            render();
-        }
-
-        document.addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: false });
-        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-    </script>
-</body>
-</html>            border-radius: inherit;
-            pointer-events: none;
-            border: 1.5px solid rgba(255, 255, 255, 0.25);
-            box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.08);
-            z-index: 1000;
-            mix-blend-mode: overlay; 
-        }
-
-        /* KOLORY TŁA: Zwiększona widoczność, ale ukryte pod czarnym rdzeniem (widać je tylko na brzegach) */
-        .ambient-glow {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px); 
-            opacity: 0.7; /* Wzmocnione, żeby ładnie przebijały na bokach */
-            z-index: 0;
-            pointer-events: none;
-            animation: float 10s infinite alternate ease-in-out; /* Bardzo zwolnione */
-        }
-
-        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #FF007F; animation-delay: 0s; }
-        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #00FFF0; animation-delay: -3s; }
-        .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #7B2CBF; animation-delay: -6s; }
-
-        @keyframes float {
-            0% { transform: scale(0.8) translate(0, 0); opacity: 0.3; }
-            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.7; }
-            100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.4; }
-        }
-
-        /* MGŁA GRACZY */
-        .finger-fog {
-            position: absolute;
-            width: 350px; 
-            height: 350px;
-            border-radius: 50%;
-            pointer-events: none;
-            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.85) 0%, rgba(var(--glow-rgb), 0.25) 45%, rgba(var(--glow-rgb), 0) 80%);
-            mix-blend-mode: screen;
-            transform: translate(-50%, -50%) scale(0);
-            transition: opacity 0.4s ease, transform 0.6s ease-out; /* Wydłużone pojawianie */
-            z-index: 10;
-        }
-
-        .finger-fog.idle {
-            transform: translate(-50%, -50%) scale(0.6);
-            opacity: 0.6;
-            animation: breathe 2.5s infinite alternate ease-in-out; /* Dużo spokojniejsze oddychanie */
-        }
-
-        @keyframes breathe {
-            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.4; }
-            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
-        }
-
-        .finger-fog.stage-1 { animation: pulse-s1 1.5s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes pulse-s1 {
-            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.7; }
-            100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.9; }
-        }
-
-        .finger-fog.stage-2 { animation: pulse-s2 1s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes pulse-s2 {
-            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
-            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-        }
-
-        .finger-fog.stage-3 { animation: pulse-s3 0.5s infinite alternate cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes pulse-s3 {
-            0% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; filter: brightness(1); }
-            100% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; filter: brightness(1.5); }
-        }
-
-        /* EPOKA ZWYCIĘZCY: Czas pojawiania się wydłużony do 3 sekund, a oddech aż do 5 sekund */
-        .finger-fog.winner {
-            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(var(--glow-rgb), 0) 80%) !important;
-            opacity: 1;
-            z-index: 100;
-            animation: 
-                peaceful-reveal 3s cubic-bezier(0.25, 1, 0.5, 1) forwards,
-                peaceful-breathe 5s ease-in-out 3s infinite alternate !important;
-        }
-
-        @keyframes peaceful-reveal {
-            0% { transform: translate(-50%, -50%) scale(1.4); filter: brightness(1) blur(5px); }
-            50% { filter: brightness(1.2) blur(0px); }
-            100% { transform: translate(-50%, -50%) scale(2.8); filter: brightness(1.5); }
-        }
-
-        @keyframes peaceful-breathe {
-            0% { transform: translate(-50%, -50%) scale(2.8); filter: brightness(1.5); }
-            100% { transform: translate(-50%, -50%) scale(3.1); filter: brightness(1.9); }
-        }
-
-        /* ROZPROSZENIE ZWYKŁEGO GRACZA (3 sekundy) */
-        .finger-fog.dispersing {
-            animation: evaporate 3s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
-        }
-
-        /* ROZPROSZENIE ZWYCIĘZCY (Potężne 4 sekundy, łagodny zjazd z rozmiaru 2.8x) */
-        .finger-fog.winner.dispersing {
-            animation: evaporate-winner 4s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
-        }
-
-        @keyframes evaporate {
-            0% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; filter: blur(5px) brightness(1.2); }
-            40% { transform: translate(-50%, -50%) scale(3); opacity: 0.4; filter: blur(30px) brightness(0.8); }
-            100% { transform: translate(-50%, -50%) scale(6); opacity: 0; filter: blur(80px) brightness(0.1); }
-        }
-
-        @keyframes evaporate-winner {
-            0% { transform: translate(-50%, -50%) scale(2.8); opacity: 1; filter: blur(0px) brightness(1.5); }
-            40% { transform: translate(-50%, -50%) scale(4.5); opacity: 0.6; filter: blur(40px) brightness(1); }
-            100% { transform: translate(-50%, -50%) scale(8); opacity: 0; filter: blur(100px) brightness(0.1); }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="glass-box">
-        <div class="ambient-glow glow-1"></div>
-        <div class="ambient-glow glow-2"></div>
-        <div class="ambient-glow glow-3"></div>
-        
-        <div class="dark-core"></div>
-        
-        <div id="game-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5;"></div>
-        
-        <div class="glass-edge-overlay"></div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('game-canvas');
-        const glassBox = document.getElementById('glass-box');
-        
-        let activeTouches = {};
-        let countdownTimer = null;
-        let isFinished = false;
-        let winnerId = null;
-        let currentStage = 0;
-
-        const colorsRGB = [
-            '0, 255, 240',   
-            '255, 0, 127',   
-            '123, 44, 191',  
-            '57, 255, 20',   
-            '255, 107, 0',   
-            '255, 215, 0',   
-            '0, 229, 255'    
-        ];
-
-        function getRelativePos(clientX, clientY) {
-            const rect = glassBox.getBoundingClientRect();
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
-
-        function render() {
-            const existingFogs = document.querySelectorAll('.finger-fog');
-            existingFogs.forEach(fog => {
-                if (!activeTouches[fog.id] && fog.id !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        // FIX: Używamy classList.add, żeby nie usunąć informacji czy to był .winner!
-                        fog.classList.add('dispersing');
-                        // Czekamy bezpieczne 4 sekundy na całkowity koniec animacji przed usunięciem HTMLa
-                        setTimeout(() => fog.remove(), 4000); 
-                    }
-                }
-            });
-
-            if (isFinished) return;
-
-            Object.keys(activeTouches).forEach(id => {
-                let fog = document.getElementById(id);
-                if (!fog) {
-                    fog = document.createElement('div');
-                    fog.className = 'finger-fog idle';
-                    fog.id = id;
-                    fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
-                    canvas.appendChild(fog);
-                }
-                fog.style.left = activeTouches[id].x + 'px';
-                fog.style.top = activeTouches[id].y + 'px';
-            });
-        }
-
-        function startCountdown() {
-            stopCountdown();
-            currentStage = 1;
-            applyStageClasses();
-            
-            countdownTimer = setInterval(() => {
-                currentStage++;
-                if (currentStage <= 3) {
-                    applyStageClasses();
-                } else {
-                    stopCountdown();
-                    drawWinner();
-                }
-            }, 1000);
-        }
-
-        function stopCountdown() {
-            if (countdownTimer) {
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            }
-            currentStage = 0;
-            if (!isFinished) {
-                const fogs = document.querySelectorAll('.finger-fog');
-                fogs.forEach(fog => {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.className = 'finger-fog idle';
-                    }
-                });
-            }
-        }
-
-        function applyStageClasses() {
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
-                if (fog.id !== winnerId && !fog.classList.contains('dispersing')) {
-                    fog.className = `finger-fog stage-${currentStage}`;
-                }
-            });
-            if (navigator.vibrate) navigator.vibrate(20);
-        }
-
-        function drawWinner() {
-            const ids = Object.keys(activeTouches);
-            if (ids.length < 2) return;
-
-            isFinished = true;
-            const randomIndex = Math.floor(Math.random() * ids.length);
-            winnerId = ids[randomIndex];
-
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
-                if (fog.id !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.classList.add('dispersing');
-                        setTimeout(() => fog.remove(), 4000);
-                    }
-                } else {
-                    fog.classList.remove('idle', 'stage-1', 'stage-2', 'stage-3');
-                    fog.classList.add('winner');
-                    if (navigator.vibrate) navigator.vibrate([400]); // Długa, wzniosła wibracja
-                }
-            });
-        }
-
-        function handleTouchStart(e) {
-            e.preventDefault();
-            if (isFinished) return;
-
-            let anyNewFinger = false;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                if (!activeTouches[touch.identifier]) {
-                    const chosenColor = colorsRGB[Math.abs(touch.identifier) % colorsRGB.length];
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    
-                    activeTouches[touch.identifier] = {
-                        x: pos.x,
-                        y: pos.y,
-                        colorRGB: chosenColor
-                    };
-                    anyNewFinger = true;
-                }
-            }
-            
-            render();
-
-            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) {
-                startCountdown();
-            }
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (isFinished) return;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                if (activeTouches[touch.identifier]) {
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    activeTouches[touch.identifier].x = pos.x;
-                    activeTouches[touch.identifier].y = pos.y;
-                }
-            }
-            render();
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                delete activeTouches[touch.identifier];
-            }
-
-            const remainingCount = Object.keys(activeTouches).length;
-
-            if (remainingCount === 0) {
-                isFinished = false;
-                winnerId = null;
-                activeTouches = {};
-                stopCountdown();
-            } else if (remainingCount < 2 && !isFinished) {
-                stopCountdown();
-            }
-
-            render();
-        }
-
-        document.addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: false });
-        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     </script>
 </body>
 </html>
