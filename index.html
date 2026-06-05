@@ -16,42 +16,42 @@
         }
         body, html {
             width: 100%;
-            height: 100%;
+            height: 100fvh; /* Wymusza pełną wysokość ekranu na iOS */
             overflow: hidden;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%);
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%) !important;
+            background-color: #0f0f1a;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             touch-action: none;
         }
         
-        /* Warstwa informacyjna */
-        #info-layer {
+        /* Wielki licznik w tle */
+        #countdown-display {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #ffffff;
-            text-align: center;
-            font-size: 1.15rem;
-            font-weight: 400;
-            letter-spacing: 0.5px;
-            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 40fvh; /* Uzależniony od wysokości ekranu, aby był ogromny */
+            font-weight: 900;
             pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 85%;
-            z-index: 10;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            opacity: 0.85;
+            z-index: 1;
+            transition: transform 0.2s ease-out, color 0.2s ease-out;
+            display: none;
         }
         
-        #info-layer b {
-            font-size: 1.4rem;
-            color: #00fff0;
-            display: block;
-            margin-top: 10px;
-            text-shadow: 0 0 15px rgba(0, 255, 240, 0.6);
+        /* Animacja pulsowania licznika przy zmianie cyfry */
+        .pulse-number {
+            animation: number-pop 0.3s ease-out;
+            color: rgba(255, 255, 255, 0.4) !important;
         }
 
-        /* Stylizacja okręgów graczy */
+        @keyframes number-pop {
+            0% { transform: translate(-50%, -50%) scale(0.7); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Okręgi graczy */
         .finger-circle {
             position: absolute;
             width: 100px;
@@ -60,11 +60,11 @@
             transform: translate(-50%, -50%) scale(0);
             border: 4px solid rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(2px);
-            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 0 30px var(--glow-color), inset 0 0 15px rgba(255,255,255,0.2);
+            z-index: 5;
         }
         
-        /* Animacja aktywnego trzymania */
         .finger-circle.holding {
             transform: translate(-50%, -50%) scale(1.1);
             animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
@@ -75,58 +75,50 @@
             100% { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 45px var(--glow-color); }
         }
 
-        /* Efekt wygranej (Zwycięzca) */
+        /* Zwycięzca */
         .finger-circle.winner {
-            transform: translate(-50%, -50%) scale(2.2) !important;
+            transform: translate(-50%, -50%) scale(2.5) !important;
             border-color: #ffffff;
-            animation: winner-glow 0.8s ease-in-out infinite alternate;
+            animation: winner-glow 0.6s ease-in-out infinite alternate;
             z-index: 100;
         }
 
         @keyframes winner-glow {
             0% { box-shadow: 0 0 50px var(--glow-color), 0 0 100px var(--glow-color), inset 0 0 30px rgba(255,255,255,0.6); }
-            100% { box-shadow: 0 0 80px var(--glow-color), 0 0 150px var(--glow-color), inset 0 0 50px rgba(255,255,255,0.8); }
+            100% { box-shadow: 0 0 90px var(--glow-color), 0 0 160px var(--glow-color), inset 0 0 50px rgba(255,255,255,0.8); }
         }
     </style>
 </head>
 <body>
 
-    <div id="info-layer">Połóżcie palce na ekranie,<br>aby rozpocząć losowanie.</div>
+    <div id="countdown-display">3</div>
     <div id="game-canvas" style="width: 100%; height: 100%;"></div>
 
     <script>
         const canvas = document.getElementById('game-canvas');
-        const info = document.getElementById('info-layer');
+        const countdownDisplay = document.getElementById('countdown-display');
         
         let activeTouches = {};
         let countdownTimer = null;
         let isFinished = false;
         let winnerId = null;
+        let timeLeft = 3;
 
-        // Paleta nowoczesnych, neonowych kolorów
-        const colors = [
-            '#00FFF0', // Cyan
-            '#FF007F', // Neon Pink
-            '#7B2CBF', // Purple
-            '#39FF14', // Neon Green
-            '#FF6B00', // Neon Orange
-            '#FFD700', // Gold
-            '#00E5FF'  // Electric Blue
-        ];
+        const colors = ['#00FFF0', '#FF007F', '#7B2CBF', '#39FF14', '#FF6B00', '#FFD700', '#00E5FF'];
 
         function render() {
-            // Usuwanie kółek, które nie są już dotykane (i nie wygrały)
+            // Usuwanie kółek graczy, którzy zabrali palce
             const existingCircles = document.querySelectorAll('.finger-circle');
             existingCircles.forEach(circle => {
                 if (!activeTouches[circle.id] && circle.id !== winnerId) {
                     circle.style.transform = 'translate(-50%, -50%) scale(0)';
-                    setTimeout(() => circle.remove(), 250);
+                    setTimeout(() => circle.remove(), 200);
                 }
             });
 
             if (isFinished) return;
 
-            // Tworzenie lub aktualizacja pozycji palców
+            // Rysowanie/Aktualizacja pozycji aktualnych palców
             Object.keys(activeTouches).forEach(id => {
                 let circle = document.getElementById(id);
                 if (!circle) {
@@ -134,10 +126,9 @@
                     circle.className = 'finger-circle';
                     circle.id = id;
                     circle.style.setProperty('--glow-color', activeTouches[id].color);
-                    circle.style.backgroundColor = activeTouches[id].color + '40'; // 25% przezroczystości tła kółka
+                    circle.style.backgroundColor = activeTouches[id].color + '40';
                     canvas.appendChild(circle);
                     
-                    // Mały trik, aby animacja wejścia (scale) zadziałała płynnie
                     requestAnimationFrame(() => {
                         if (circle) circle.classList.add('holding');
                     });
@@ -146,29 +137,25 @@
                 circle.style.top = activeTouches[id].y + 'px';
             });
 
-            // Zarządzanie stanem komunikatów tekstowych
+            // Ukrywanie/Pokazywanie licznika w zależności od liczby graczy
             const count = Object.keys(activeTouches).length;
-            if (count === 0) {
-                info.style.opacity = '0.85';
-                info.innerHTML = "Połóżcie palce na ekranie,<br>aby rozpocząć losowanie.";
+            if (count < 2) {
                 stopCountdown();
-            } else if (count === 1) {
-                info.style.opacity = '0.85';
-                info.innerHTML = "Czekam na resztę graczy...<br><span style='font-size:0.9rem; color:#aaa;'>Dołóżcie przynajmniej jeden palec.</span>";
-                stopCountdown();
+                countdownDisplay.style.display = 'none';
             }
         }
 
         function startCountdown() {
-            if (countdownTimer || isFinished) return;
+            stopCountdown(); // Czyszczenie poprzedniego interwału na wszelki wypadek
             
-            let timeLeft = 3;
-            info.innerHTML = `Trzymajcie palce! Losowanie za:<b>${timeLeft}</b>`;
+            timeLeft = 3;
+            updateCountdownDisplay();
+            countdownDisplay.style.display = 'block';
             
             countdownTimer = setInterval(() => {
                 timeLeft--;
                 if (timeLeft > 0) {
-                    info.innerHTML = `Trzymajcie palce! Losowanie za:<b>${timeLeft}</b>`;
+                    updateCountdownDisplay();
                 } else {
                     stopCountdown();
                     drawWinner();
@@ -183,52 +170,61 @@
             }
         }
 
+        function updateCountdownDisplay() {
+            countdownDisplay.innerText = timeLeft;
+            // Wymuszenie restartu animacji cyfry
+            countdownDisplay.classList.remove('pulse-number');
+            void countdownDisplay.offsetWidth; 
+            countdownDisplay.classList.add('pulse-number');
+        }
+
         function drawWinner() {
             const ids = Object.keys(activeTouches);
             if (ids.length < 2) return;
 
             isFinished = true;
+            countdownDisplay.style.display = 'none';
+
             const randomIndex = Math.floor(Math.random() * ids.length);
             winnerId = ids[randomIndex];
 
-            // Czyszczenie przegranych i wyróżnienie zwycięzcy
             const circles = document.querySelectorAll('.finger-circle');
             circles.forEach(circle => {
                 if (circle.id !== winnerId) {
                     circle.style.transform = 'translate(-50%, -50%) scale(0)';
-                    setTimeout(() => circle.remove(), 250);
+                    setTimeout(() => circle.remove(), 200);
                 } else {
                     circle.classList.remove('holding');
                     circle.classList.add('winner');
                     
-                    // Dodanie wibracji (Haptic Feedback) jeśli urządzenie wspiera
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
-
-            info.style.opacity = '1';
-            info.innerHTML = "<span style='font-size: 2.2rem; color: #fff; font-weight: 800; text-shadow: 0 0 20px rgba(255,255,255,0.4);'>WYBRANO!</span><br><br><span style='color:#aaa; font-size:1rem;'>Zdejmijcie palce, aby zresetować.</span>";
         }
 
         function handleTouchStart(e) {
             e.preventDefault();
             if (isFinished) return;
 
+            let anyNewFinger = false;
+
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 if (!activeTouches[touch.identifier]) {
-                    // Dobieramy unikalny kolor na podstawie ID dotknięcia
-                    const chosenColor = colors[touch.identifier % colors.length];
+                    const chosenColor = colors[Math.abs(touch.identifier) % colors.length];
                     activeTouches[touch.identifier] = {
                         x: touch.clientX,
                         y: touch.clientY,
                         color: chosenColor
                     };
+                    anyNewFinger = true;
                 }
             }
+            
             render();
 
-            if (Object.keys(activeTouches).length >= 2) {
+            // Jeżeli jest min. 2 graczy i ktoś właśnie dołożył palec -> Reset i start odliczania od 3
+            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) {
                 startCountdown();
             }
         }
@@ -255,16 +251,16 @@
                 delete activeTouches[touch.identifier];
             }
 
-            // Automatyczny reset planszy po zabraniu absolutnie wszystkich palców
+            // Pełny reset pamięci gry, kiedy na ekranie nie ma już ANI JEDNEGO palca
             if (Object.keys(activeTouches).length === 0) {
                 isFinished = false;
                 winnerId = null;
+                activeTouches = {}; // Dodatkowe czyszczenie obiektu dotknięć
             }
 
             render();
         }
 
-        // Rejestracja zdarzeń
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
