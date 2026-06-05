@@ -19,42 +19,77 @@
         
         body, html {
             width: 100vw;
-            height: 100dvh; /* Dynamiczna wysokość wymuszająca pełen ekran */
+            height: 100dvh;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             overflow: hidden;
             overscroll-behavior: none;
-            background-color: #000000;
+            background-color: #000000; /* Totalna czerń wokół boxa */
             touch-action: none;
         }
 
+        /* GŁÓWNY KONTENER LIQUID GLASS */
+        #glass-box {
+            position: absolute;
+            /* Inteligentne marginesy - uwzględniają notcha na iOS + dają 20px zapasu */
+            top: max(env(safe-area-inset-top), 20px);
+            bottom: max(env(safe-area-inset-bottom), 20px);
+            left: max(env(safe-area-inset-left), 20px);
+            right: max(env(safe-area-inset-right), 20px);
+            border-radius: 40px;
+            background: rgba(15, 15, 20, 0.4); /* Przyciemnione szkło */
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            overflow: hidden; /* Zatrzymuje kolory wewnątrz */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            transform: translateZ(0); /* Wymuszenie akceleracji sprzętowej (płynność) */
+        }
+
+        /* AKTYWNA SZKLANA KRAWĘDŹ - Imituje odbicie światła */
+        .glass-edge-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            /* Krawędź szkła */
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            /* Delikatny blask do wewnątrz */
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
+            z-index: 1000;
+            /* To sprawia, że biała ramka przejmuje kolory z mgły pod spodem! */
+            mix-blend-mode: overlay; 
+        }
+
+        /* TŁO AMBIENTOWE TYLKO W BOXIE */
         .ambient-glow {
             position: absolute;
             border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.15;
+            filter: blur(80px);
+            opacity: 0.2;
             z-index: 0;
             pointer-events: none;
             animation: float 12s infinite alternate ease-in-out;
         }
 
-        .glow-1 { top: -10vw; left: -10vw; width: 60vw; height: 60vw; background: #FF007F; animation-delay: 0s; }
-        .glow-2 { bottom: -15vw; right: -10vw; width: 70vw; height: 70vw; background: #00FFF0; animation-delay: -4s; }
-        .glow-3 { top: 30vh; left: 60vw; width: 50vw; height: 50vw; background: #7B2CBF; animation-delay: -8s; }
+        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #FF007F; animation-delay: 0s; }
+        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #00FFF0; animation-delay: -4s; }
+        .glow-3 { top: 30%; left: 60%; width: 50%; height: 50%; background: #7B2CBF; animation-delay: -8s; }
 
         @keyframes float {
             0% { transform: scale(1) translate(0, 0); opacity: 0.15; }
-            50% { transform: scale(1.2) translate(5vw, 5vh); opacity: 0.25; }
-            100% { transform: scale(0.9) translate(-5vw, -5vh); opacity: 0.1; }
+            50% { transform: scale(1.3) translate(5%, 5%); opacity: 0.3; }
+            100% { transform: scale(0.9) translate(-5%, -5%); opacity: 0.15; }
         }
 
+        /* MGŁA GRACZY - Perfekcyjny fade do przezroczystości */
         .finger-fog {
             position: absolute;
-            width: 400px; 
-            height: 400px;
+            width: 350px; 
+            height: 350px;
             border-radius: 50%;
             pointer-events: none;
-            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.7) 0%, rgba(var(--glow-rgb), 0.15) 45%, rgba(0, 0, 0, 0) 75%);
+            /* Użycie rgba(..., 0) zamiast 'transparent' ratuje przed szarymi artefaktami na iOS */
+            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.85) 0%, rgba(var(--glow-rgb), 0.25) 45%, rgba(var(--glow-rgb), 0) 80%);
             mix-blend-mode: screen;
             transform: translate(-50%, -50%) scale(0);
             transition: opacity 0.3s ease, transform 0.4s ease-out;
@@ -91,7 +126,7 @@
         }
 
         .finger-fog.winner {
-            background: radial-gradient(circle closest-side, #ffffff 0%, rgba(var(--glow-rgb), 1) 15%, rgba(var(--glow-rgb), 0.3) 45%, rgba(0, 0, 0, 0) 75%) !important;
+            background: radial-gradient(circle closest-side, #ffffff 0%, rgba(var(--glow-rgb), 1) 15%, rgba(var(--glow-rgb), 0.3) 45%, rgba(var(--glow-rgb), 0) 80%) !important;
             transform: translate(-50%, -50%) scale(2.4) !important;
             opacity: 1;
             animation: winner-glow 0.8s ease-in-out infinite alternate;
@@ -103,24 +138,30 @@
             100% { transform: translate(-50%, -50%) scale(2.6); filter: brightness(1.6); }
         }
 
-        /* MAGICZNE ROZPROSZENIE (Puszczenie palca) */
         .finger-fog.dispersing {
-            transform: translate(-50%, -50%) scale(1.8) !important; /* Mgła mocno puchnie */
-            opacity: 0 !important; /* Ginie w ciemności */
-            filter: blur(20px) brightness(1.5); /* Rozmywa się i lekko rozbłyska przed śmiercią */
+            transform: translate(-50%, -50%) scale(1.8) !important;
+            opacity: 0 !important;
+            filter: blur(20px) brightness(1.5);
             transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease-out, filter 0.6s ease-out !important;
         }
     </style>
 </head>
 <body>
 
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
-    <div class="ambient-glow glow-3"></div>
-    <div id="game-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5;"></div>
+    <div id="glass-box">
+        <div class="ambient-glow glow-1"></div>
+        <div class="ambient-glow glow-2"></div>
+        <div class="ambient-glow glow-3"></div>
+        
+        <div id="game-canvas" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5;"></div>
+        
+        <div class="glass-edge-overlay"></div>
+    </div>
 
     <script>
+        // Nasłuchujemy na całym dokumencie, żeby palce wychodzące na czarny margines nie przerywały gry
         const canvas = document.getElementById('game-canvas');
+        const glassBox = document.getElementById('glass-box');
         
         let activeTouches = {};
         let countdownTimer = null;
@@ -138,14 +179,21 @@
             '0, 229, 255'    
         ];
 
+        // Funkcja do obliczania relatywnej pozycji względem glass-boxa
+        function getRelativePos(clientX, clientY) {
+            const rect = glassBox.getBoundingClientRect();
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
         function render() {
             const existingFogs = document.querySelectorAll('.finger-fog');
             existingFogs.forEach(fog => {
-                // Jeśli palca już nie ma na ekranie, odpalamy efekt rozproszenia
                 if (!activeTouches[fog.id] && fog.id !== winnerId) {
                     if (!fog.classList.contains('dispersing')) {
                         fog.className = 'finger-fog dispersing';
-                        // Fizyczne usunięcie elementu po zakończeniu animacji (600ms)
                         setTimeout(() => fog.remove(), 600);
                     }
                 }
@@ -160,7 +208,7 @@
                     fog.className = 'finger-fog idle';
                     fog.id = id;
                     fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
-                    canvas.appendChild(fog);
+                    canvas.appendChild(fog); // Dodajemy do płótna wewnątrz szklanego pudełka
                 }
                 fog.style.left = activeTouches[id].x + 'px';
                 fog.style.top = activeTouches[id].y + 'px';
@@ -192,7 +240,6 @@
             if (!isFinished) {
                 const fogs = document.querySelectorAll('.finger-fog');
                 fogs.forEach(fog => {
-                    // Reset do idle, ale ignoruj te, które właśnie znikają
                     if (!fog.classList.contains('dispersing')) {
                         fog.className = 'finger-fog idle';
                     }
@@ -242,9 +289,11 @@
                 const touch = e.changedTouches[i];
                 if (!activeTouches[touch.identifier]) {
                     const chosenColor = colorsRGB[Math.abs(touch.identifier) % colorsRGB.length];
+                    const pos = getRelativePos(touch.clientX, touch.clientY);
+                    
                     activeTouches[touch.identifier] = {
-                        x: touch.clientX,
-                        y: touch.clientY,
+                        x: pos.x,
+                        y: pos.y,
                         colorRGB: chosenColor
                     };
                     anyNewFinger = true;
@@ -265,8 +314,9 @@
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 if (activeTouches[touch.identifier]) {
-                    activeTouches[touch.identifier].x = touch.clientX;
-                    activeTouches[touch.identifier].y = touch.clientY;
+                    const pos = getRelativePos(touch.clientX, touch.clientY);
+                    activeTouches[touch.identifier].x = pos.x;
+                    activeTouches[touch.identifier].y = pos.y;
                 }
             }
             render();
@@ -291,14 +341,15 @@
                 stopCountdown();
             }
 
-            // Render odpali animację rozproszenia dla zabranych palców
             render();
         }
 
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+        // Zmieniono nasłuchiwanie z canvas na document, 
+        // aby upewnić się, że gra działa płynnie nawet gdy palec zjedzie na margines.
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     </script>
 </body>
 </html>
