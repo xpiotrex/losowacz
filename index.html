@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Losowanie Gracza</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,46 +18,80 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #121212;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            touch-action: none; /* Blokuje domyślne gesty systemowe */
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none;
         }
+        
+        /* Warstwa informacyjna */
         #info-layer {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: rgba(255, 255, 255, 0.6);
+            color: #ffffff;
             text-align: center;
-            font-size: 1.2rem;
+            font-size: 1.15rem;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            line-height: 1.6;
             pointer-events: none;
-            transition: opacity 0.3s;
-            width: 80%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 85%;
+            z-index: 10;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            opacity: 0.85;
         }
+        
+        #info-layer b {
+            font-size: 1.4rem;
+            color: #00fff0;
+            display: block;
+            margin-top: 10px;
+            text-shadow: 0 0 15px rgba(0, 255, 240, 0.6);
+        }
+
+        /* Stylizacja okręgów graczy */
         .finger-circle {
             position: absolute;
-            width: 90px;
-            height: 90px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            transform: translate(-50%, -50%) scale(1);
-            transition: transform 0.1s ease-out;
-            border: 4px solid white;
-            box-shadow: 0 0 20px rgba(255,255,255,0.4);
+            transform: translate(-50%, -50%) scale(0);
+            border: 4px solid rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 30px var(--glow-color), inset 0 0 15px rgba(255,255,255,0.2);
         }
-        /* Efekt odliczania/ładowania */
+        
+        /* Animacja aktywnego trzymania */
         .finger-circle.holding {
-            transform: translate(-50%, -50%) scale(1.2);
-            animation: pulse 1s infinite alternate;
+            transform: translate(-50%, -50%) scale(1.1);
+            animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
         }
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
-            100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+
+        @keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 25px var(--glow-color); }
+            100% { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 45px var(--glow-color); }
+        }
+
+        /* Efekt wygranej (Zwycięzca) */
+        .finger-circle.winner {
+            transform: translate(-50%, -50%) scale(2.2) !important;
+            border-color: #ffffff;
+            animation: winner-glow 0.8s ease-in-out infinite alternate;
+            z-index: 100;
+        }
+
+        @keyframes winner-glow {
+            0% { box-shadow: 0 0 50px var(--glow-color), 0 0 100px var(--glow-color), inset 0 0 30px rgba(255,255,255,0.6); }
+            100% { box-shadow: 0 0 80px var(--glow-color), 0 0 150px var(--glow-color), inset 0 0 50px rgba(255,255,255,0.8); }
         }
     </style>
 </head>
 <body>
 
-    <div id="info-layer">Każdy gracz kładzie jeden palec na ekranie...<br><br>Losowanie za 3 sekundy od położenia min. 2 palców.</div>
+    <div id="info-layer">Połóżcie palce na ekranie,<br>aby rozpocząć losowanie.</div>
     <div id="game-canvas" style="width: 100%; height: 100%;"></div>
 
     <script>
@@ -69,46 +103,59 @@
         let isFinished = false;
         let winnerId = null;
 
-        // Paleta żywych kolorów dla graczy
-        const colors = ['#FF2D55', '#FF9500', '#FFCC00', '#4CD964', '#5AC8FA', '#5856D6', '#007AFF'];
+        // Paleta nowoczesnych, neonowych kolorów
+        const colors = [
+            '#00FFF0', // Cyan
+            '#FF007F', // Neon Pink
+            '#7B2CBF', // Purple
+            '#39FF14', // Neon Green
+            '#FF6B00', // Neon Orange
+            '#FFD700', // Gold
+            '#00E5FF'  // Electric Blue
+        ];
 
         function render() {
-            // Czyszczenie starych kółek, które nie są już dotykane
+            // Usuwanie kółek, które nie są już dotykane (i nie wygrały)
             const existingCircles = document.querySelectorAll('.finger-circle');
             existingCircles.forEach(circle => {
-                if (!activeTouches[circle.id]) {
-                    circle.remove();
+                if (!activeTouches[circle.id] && circle.id !== winnerId) {
+                    circle.style.transform = 'translate(-50%, -50%) scale(0)';
+                    setTimeout(() => circle.remove(), 250);
                 }
             });
 
             if (isFinished) return;
 
-            // Rysowanie/Aktualizacja kółek dla aktywnych dotknięć
+            // Tworzenie lub aktualizacja pozycji palców
             Object.keys(activeTouches).forEach(id => {
                 let circle = document.getElementById(id);
                 if (!circle) {
                     circle = document.createElement('div');
-                    circle.className = 'finger-circle holding';
+                    circle.className = 'finger-circle';
                     circle.id = id;
-                    circle.style.backgroundColor = activeTouches[id].color;
+                    circle.style.setProperty('--glow-color', activeTouches[id].color);
+                    circle.style.backgroundColor = activeTouches[id].color + '40'; // 25% przezroczystości tła kółka
                     canvas.appendChild(circle);
+                    
+                    // Mały trik, aby animacja wejścia (scale) zadziałała płynnie
+                    requestAnimationFrame(() => {
+                        if (circle) circle.classList.add('holding');
+                    });
                 }
                 circle.style.left = activeTouches[id].x + 'px';
                 circle.style.top = activeTouches[id].y + 'px';
             });
 
-            // Logika zarządzania tekstem informacyjnym
+            // Zarządzanie stanem komunikatów tekstowych
             const count = Object.keys(activeTouches).length;
             if (count === 0) {
-                info.style.opacity = '1';
-                info.innerHTML = "Każdy gracz kładzie jeden palec na ekranie...";
+                info.style.opacity = '0.85';
+                info.innerHTML = "Połóżcie palce na ekranie,<br>aby rozpocząć losowanie.";
                 stopCountdown();
             } else if (count === 1) {
-                info.style.opacity = '1';
-                info.innerHTML = "Potrzeba minimum 2 graczy!";
+                info.style.opacity = '0.85';
+                info.innerHTML = "Czekam na resztę graczy...<br><span style='font-size:0.9rem; color:#aaa;'>Dołóżcie przynajmniej jeden palec.</span>";
                 stopCountdown();
-            } else {
-                info.style.opacity = '1';
             }
         }
 
@@ -116,12 +163,12 @@
             if (countdownTimer || isFinished) return;
             
             let timeLeft = 3;
-            info.innerHTML = `Trzymajcie palce! Losowanie za: ${timeLeft}`;
+            info.innerHTML = `Trzymajcie palce! Losowanie za:<b>${timeLeft}</b>`;
             
             countdownTimer = setInterval(() => {
                 timeLeft--;
                 if (timeLeft > 0) {
-                    info.innerHTML = `Trzymajcie palce! Losowanie za: ${timeLeft}`;
+                    info.innerHTML = `Trzymajcie palce! Losowanie za:<b>${timeLeft}</b>`;
                 } else {
                     stopCountdown();
                     drawWinner();
@@ -144,19 +191,23 @@
             const randomIndex = Math.floor(Math.random() * ids.length);
             winnerId = ids[randomIndex];
 
-            // Usuń przegranych, zostaw tylko zwycięzcę z efektem "wybuchu"
+            // Czyszczenie przegranych i wyróżnienie zwycięzcy
             const circles = document.querySelectorAll('.finger-circle');
             circles.forEach(circle => {
                 if (circle.id !== winnerId) {
-                    circle.remove();
+                    circle.style.transform = 'translate(-50%, -50%) scale(0)';
+                    setTimeout(() => circle.remove(), 250);
                 } else {
                     circle.classList.remove('holding');
-                    circle.style.transform = 'translate(-50%, -50%) scale(3)';
-                    circle.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    circle.classList.add('winner');
+                    
+                    // Dodanie wibracji (Haptic Feedback) jeśli urządzenie wspiera
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
 
-            info.innerHTML = "<span style='font-size: 2rem; color: #fff; font-weight: bold;'>MAMY ZWYCIĘZCĘ!</span><br><br>Zdejmijcie palce, aby zagrać ponownie.";
+            info.style.opacity = '1';
+            info.innerHTML = "<span style='font-size: 2.2rem; color: #fff; font-weight: 800; text-shadow: 0 0 20px rgba(255,255,255,0.4);'>WYBRANO!</span><br><br><span style='color:#aaa; font-size:1rem;'>Zdejmijcie palce, aby zresetować.</span>";
         }
 
         function handleTouchStart(e) {
@@ -165,13 +216,13 @@
 
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                // Przypisujemy losowy kolor z palety, jeśli to nowy palec
                 if (!activeTouches[touch.identifier]) {
-                    const availableColor = colors[touch.identifier % colors.length];
+                    // Dobieramy unikalny kolor na podstawie ID dotknięcia
+                    const chosenColor = colors[touch.identifier % colors.length];
                     activeTouches[touch.identifier] = {
                         x: touch.clientX,
                         y: touch.clientY,
-                        color: availableColor
+                        color: chosenColor
                     };
                 }
             }
@@ -204,7 +255,7 @@
                 delete activeTouches[touch.identifier];
             }
 
-            // Reset gry, jeśli wszyscy zabrali palce po zakończeniu losowania
+            // Automatyczny reset planszy po zabraniu absolutnie wszystkich palców
             if (Object.keys(activeTouches).length === 0) {
                 isFinished = false;
                 winnerId = null;
@@ -213,7 +264,7 @@
             render();
         }
 
-        // Podpięcie zdarzeń dotykowych z blokowaniem domyślnych akcji Safari
+        // Rejestracja zdarzeń
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
