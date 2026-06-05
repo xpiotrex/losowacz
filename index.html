@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Losowanie Gracza</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #121212;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            touch-action: none; /* Blokuje domyślne gesty systemowe */
+        }
+        #info-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            font-size: 1.2rem;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            width: 80%;
+        }
+        .finger-circle {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform 0.1s ease-out;
+            border: 4px solid white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.4);
+        }
+        /* Efekt odliczania/ładowania */
+        .finger-circle.holding {
+            transform: translate(-50%, -50%) scale(1.2);
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="info-layer">Każdy gracz kładzie jeden palec na ekranie...<br><br>Losowanie za 3 sekundy od położenia min. 2 palców.</div>
+    <div id="game-canvas" style="width: 100%; height: 100%;"></div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const info = document.getElementById('info-layer');
+        
+        let activeTouches = {};
+        let countdownTimer = null;
+        let isFinished = false;
+        let winnerId = null;
+
+        // Paleta żywych kolorów dla graczy
+        const colors = ['#FF2D55', '#FF9500', '#FFCC00', '#4CD964', '#5AC8FA', '#5856D6', '#007AFF'];
+
+        function render() {
+            // Czyszczenie starych kółek, które nie są już dotykane
+            const existingCircles = document.querySelectorAll('.finger-circle');
+            existingCircles.forEach(circle => {
+                if (!activeTouches[circle.id]) {
+                    circle.remove();
+                }
+            });
+
+            if (isFinished) return;
+
+            // Rysowanie/Aktualizacja kółek dla aktywnych dotknięć
+            Object.keys(activeTouches).forEach(id => {
+                let circle = document.getElementById(id);
+                if (!circle) {
+                    circle = document.createElement('div');
+                    circle.className = 'finger-circle holding';
+                    circle.id = id;
+                    circle.style.backgroundColor = activeTouches[id].color;
+                    canvas.appendChild(circle);
+                }
+                circle.style.left = activeTouches[id].x + 'px';
+                circle.style.top = activeTouches[id].y + 'px';
+            });
+
+            // Logika zarządzania tekstem informacyjnym
+            const count = Object.keys(activeTouches).length;
+            if (count === 0) {
+                info.style.opacity = '1';
+                info.innerHTML = "Każdy gracz kładzie jeden palec na ekranie...";
+                stopCountdown();
+            } else if (count === 1) {
+                info.style.opacity = '1';
+                info.innerHTML = "Potrzeba minimum 2 graczy!";
+                stopCountdown();
+            } else {
+                info.style.opacity = '1';
+            }
+        }
+
+        function startCountdown() {
+            if (countdownTimer || isFinished) return;
+            
+            let timeLeft = 3;
+            info.innerHTML = `Trzymajcie palce! Losowanie za: ${timeLeft}`;
+            
+            countdownTimer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    info.innerHTML = `Trzymajcie palce! Losowanie za: ${timeLeft}`;
+                } else {
+                    stopCountdown();
+                    drawWinner();
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        function drawWinner() {
+            const ids = Object.keys(activeTouches);
+            if (ids.length < 2) return;
+
+            isFinished = true;
+            const randomIndex = Math.floor(Math.random() * ids.length);
+            winnerId = ids[randomIndex];
+
+            // Usuń przegranych, zostaw tylko zwycięzcę z efektem "wybuchu"
+            const circles = document.querySelectorAll('.finger-circle');
+            circles.forEach(circle => {
+                if (circle.id !== winnerId) {
+                    circle.remove();
+                } else {
+                    circle.classList.remove('holding');
+                    circle.style.transform = 'translate(-50%, -50%) scale(3)';
+                    circle.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                }
+            });
+
+            info.innerHTML = "<span style='font-size: 2rem; color: #fff; font-weight: bold;'>MAMY ZWYCIĘZCĘ!</span><br><br>Zdejmijcie palce, aby zagrać ponownie.";
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (isFinished) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                // Przypisujemy losowy kolor z palety, jeśli to nowy palec
+                if (!activeTouches[touch.identifier]) {
+                    const availableColor = colors[touch.identifier % colors.length];
+                    activeTouches[touch.identifier] = {
+                        x: touch.clientX,
+                        y: touch.clientY,
+                        color: availableColor
+                    };
+                }
+            }
+            render();
+
+            if (Object.keys(activeTouches).length >= 2) {
+                startCountdown();
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (isFinished) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (activeTouches[touch.identifier]) {
+                    activeTouches[touch.identifier].x = touch.clientX;
+                    activeTouches[touch.identifier].y = touch.clientY;
+                }
+            }
+            render();
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                delete activeTouches[touch.identifier];
+            }
+
+            // Reset gry, jeśli wszyscy zabrali palce po zakończeniu losowania
+            if (Object.keys(activeTouches).length === 0) {
+                isFinished = false;
+                winnerId = null;
+            }
+
+            render();
+        }
+
+        // Podpięcie zdarzeń dotykowych z blokowaniem domyślnych akcji Safari
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    </script>
+</body>
+</html>
