@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Losowanie Gracza</title>
+    <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Losowanie Gracza</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,146 +14,177 @@
             -webkit-user-select: none;
             margin: 0;
             padding: 0;
+            /* Wyłącza podświetlenie przy tapnięciu na iOS */
+            -webkit-tap-highlight-color: transparent; 
         }
+        
         body, html {
-            width: 100%;
+            width: 100vw;
             height: 100vh;
+            /* Kluczowe dla usunięcia białych pasków na iOS: */
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
             overflow: hidden;
-            background: #0f0f1a;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overscroll-behavior: none;
+            background-color: #000000;
             touch-action: none;
         }
-        
-        /* Wielki licznik w tle */
-        #countdown-display {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: rgba(255, 255, 255, 0.15);
-            font-size: 40vh;
-            font-weight: 900;
-            pointer-events: none;
-            z-index: 1;
-            transition: transform 0.2s ease-out, color 0.2s ease-out;
-            display: none;
-        }
-        
-        /* Animacja pulsowania licznika przy zmianie cyfry */
-        .pulse-number {
-            animation: number-pop 0.3s ease-out;
-            color: rgba(255, 255, 255, 0.4) !important;
-        }
 
-        @keyframes number-pop {
-            0% { transform: translate(-50%, -50%) scale(0.7); }
-            50% { transform: translate(-50%, -50%) scale(1.1); }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-
-        /* Okręgi graczy */
-        .finger-circle {
+        /* Ambientowe rozbłyski w tle */
+        .ambient-glow {
             position: absolute;
-            width: 100px;
-            height: 100px;
             border-radius: 50%;
+            filter: blur(100px); /* Bardzo mocne rozmycie */
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+            animation: float 12s infinite alternate ease-in-out;
+        }
+
+        .glow-1 { top: -10vw; left: -10vw; width: 60vw; height: 60vw; background: #FF007F; animation-delay: 0s; }
+        .glow-2 { bottom: -15vw; right: -10vw; width: 70vw; height: 70vw; background: #00FFF0; animation-delay: -4s; }
+        .glow-3 { top: 30vh; left: 60vw; width: 50vw; height: 50vw; background: #7B2CBF; animation-delay: -8s; }
+
+        @keyframes float {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.15; }
+            50% { transform: scale(1.2) translate(5vw, 5vh); opacity: 0.25; }
+            100% { transform: scale(0.9) translate(-5vw, -5vh); opacity: 0.1; }
+        }
+
+        /* Mgła pod palcami graczy */
+        .finger-fog {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            pointer-events: none;
+            /* Gradient tworzący efekt mgły/neonu */
+            background: radial-gradient(circle, rgba(var(--glow-rgb), 0.7) 0%, rgba(var(--glow-rgb), 0.2) 30%, transparent 70%);
+            mix-blend-mode: screen; /* Pięknie miesza kolory gdy palce są blisko siebie */
             transform: translate(-50%, -50%) scale(0);
-            border: 4px solid rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(2px);
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 0 30px var(--glow-color), inset 0 0 15px rgba(255,255,255,0.2);
-            z-index: 5;
-        }
-        
-        .finger-circle.holding {
-            transform: translate(-50%, -50%) scale(1.1);
-            animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+            transition: opacity 0.3s ease, transform 0.4s ease-out;
+            z-index: 10;
         }
 
-        @keyframes pulse-ring {
-            0% { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 25px var(--glow-color); }
-            100% { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 45px var(--glow-color); }
+        /* Faza spoczynku - czekanie na resztę graczy */
+        .finger-fog.idle {
+            transform: translate(-50%, -50%) scale(0.6);
+            opacity: 0.6;
+            animation: breathe 2s infinite alternate ease-in-out;
         }
 
-        /* Zwycięzca */
-        .finger-circle.winner {
-            transform: translate(-50%, -50%) scale(2.5) !important;
-            border-color: #ffffff;
-            animation: winner-glow 0.6s ease-in-out infinite alternate;
+        @keyframes breathe {
+            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.8; }
+        }
+
+        /* Fazy odliczania - coraz szybsze i większe pulsowanie */
+        .finger-fog.stage-1 {
+            animation: pulse-s1 1s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes pulse-s1 {
+            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.9; }
+        }
+
+        .finger-fog.stage-2 {
+            animation: pulse-s2 0.5s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes pulse-s2 {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+        }
+
+        .finger-fog.stage-3 {
+            animation: pulse-s3 0.25s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes pulse-s3 {
+            0% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; filter: brightness(1); }
+            100% { transform: translate(-50%, -50%) scale(1.4); opacity: 1; filter: brightness(1.5); }
+        }
+
+        /* Efekt Zwycięzcy */
+        .finger-fog.winner {
+            /* Gigantyczna mgła rozświetlająca ekran */
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(var(--glow-rgb), 0.8) 20%, rgba(var(--glow-rgb), 0.3) 50%, transparent 80%);
+            transform: translate(-50%, -50%) scale(3) !important;
+            opacity: 1;
+            animation: winner-glow 0.8s ease-in-out infinite alternate;
             z-index: 100;
         }
 
         @keyframes winner-glow {
-            0% { box-shadow: 0 0 50px var(--glow-color), 0 0 100px var(--glow-color), inset 0 0 30px rgba(255,255,255,0.6); }
-            100% { box-shadow: 0 0 90px var(--glow-color), 0 0 160px var(--glow-color), inset 0 0 50px rgba(255,255,255,0.8); }
+            0% { transform: translate(-50%, -50%) scale(2.8); filter: brightness(1.2); }
+            100% { transform: translate(-50%, -50%) scale(3.5); filter: brightness(1.8); }
         }
     </style>
 </head>
 <body>
 
-    <div id="countdown-display">3</div>
-    <div id="game-canvas" style="width: 100%; height: 100vh;"></div>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div id="game-canvas" style="position: absolute; width: 100%; height: 100%; z-index: 5;"></div>
 
     <script>
         const canvas = document.getElementById('game-canvas');
-        const countdownDisplay = document.getElementById('countdown-display');
         
         let activeTouches = {};
         let countdownTimer = null;
         let isFinished = false;
         let winnerId = null;
-        let timeLeft = 3;
+        let currentStage = 0;
 
-        const colors = ['#00FFF0', '#FF007F', '#7B2CBF', '#39FF14', '#FF6B00', '#FFD700', '#00E5FF'];
+        // Kolory zapisane jako wartości RGB dla łatwego użycia w przezroczystościach
+        const colorsRGB = [
+            '0, 255, 240',   // Cyan
+            '255, 0, 127',   // Neon Pink
+            '123, 44, 191',  // Purple
+            '57, 255, 20',   // Neon Green
+            '255, 107, 0',   // Neon Orange
+            '255, 215, 0',   // Gold
+            '0, 229, 255'    // Electric Blue
+        ];
 
         function render() {
-            const existingCircles = document.querySelectorAll('.finger-circle');
-            existingCircles.forEach(circle => {
-                if (!activeTouches[circle.id] && circle.id !== winnerId) {
-                    circle.style.transform = 'translate(-50%, -50%) scale(0)';
-                    setTimeout(() => circle.remove(), 200);
+            // Sprzątanie po zabranych palcach
+            const existingFogs = document.querySelectorAll('.finger-fog');
+            existingFogs.forEach(fog => {
+                if (!activeTouches[fog.id] && fog.id !== winnerId) {
+                    fog.style.opacity = '0';
+                    fog.style.transform = 'translate(-50%, -50%) scale(0)';
+                    setTimeout(() => fog.remove(), 300);
                 }
             });
 
             if (isFinished) return;
 
+            // Tworzenie lub pozycjonowanie mgły
             Object.keys(activeTouches).forEach(id => {
-                let circle = document.getElementById(id);
-                if (!circle) {
-                    circle = document.createElement('div');
-                    circle.className = 'finger-circle';
-                    circle.id = id;
-                    circle.style.setProperty('--glow-color', activeTouches[id].color);
-                    circle.style.backgroundColor = activeTouches[id].color + '40';
-                    canvas.appendChild(circle);
-                    
-                    requestAnimationFrame(() => {
-                        if (circle) circle.classList.add('holding');
-                    });
+                let fog = document.getElementById(id);
+                if (!fog) {
+                    fog = document.createElement('div');
+                    fog.className = 'finger-fog idle';
+                    fog.id = id;
+                    fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
+                    canvas.appendChild(fog);
                 }
-                circle.style.left = activeTouches[id].x + 'px';
-                circle.style.top = activeTouches[id].y + 'px';
+                // Ustawienie podążania mgły za palcem
+                fog.style.left = activeTouches[id].x + 'px';
+                fog.style.top = activeTouches[id].y + 'px';
             });
-
-            const count = Object.keys(activeTouches).length;
-            if (count < 2) {
-                stopCountdown();
-                countdownDisplay.style.display = 'none';
-            }
         }
 
         function startCountdown() {
             stopCountdown();
-            
-            timeLeft = 3;
-            updateCountdownDisplay();
-            countdownDisplay.style.display = 'block';
+            currentStage = 1;
+            applyStageClasses();
             
             countdownTimer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft > 0) {
-                    updateCountdownDisplay();
+                currentStage++;
+                if (currentStage <= 3) {
+                    applyStageClasses();
                 } else {
                     stopCountdown();
                     drawWinner();
@@ -165,13 +197,25 @@
                 clearInterval(countdownTimer);
                 countdownTimer = null;
             }
+            currentStage = 0;
+            // Powrót do fazy idle, jeśli odliczanie przerwano
+            if (!isFinished) {
+                const fogs = document.querySelectorAll('.finger-fog');
+                fogs.forEach(fog => {
+                    fog.className = 'finger-fog idle';
+                });
+            }
         }
 
-        function updateCountdownDisplay() {
-            countdownDisplay.innerText = timeLeft;
-            countdownDisplay.classList.remove('pulse-number');
-            void countdownDisplay.offsetWidth; 
-            countdownDisplay.classList.add('pulse-number');
+        function applyStageClasses() {
+            const fogs = document.querySelectorAll('.finger-fog');
+            fogs.forEach(fog => {
+                if (fog.id !== winnerId) {
+                    fog.className = `finger-fog stage-${currentStage}`;
+                }
+            });
+            // Delikatna wibracja przy każdej zmianie fazy (jak bicie serca)
+            if (navigator.vibrate) navigator.vibrate(30);
         }
 
         function drawWinner() {
@@ -179,20 +223,18 @@
             if (ids.length < 2) return;
 
             isFinished = true;
-            countdownDisplay.style.display = 'none';
-
             const randomIndex = Math.floor(Math.random() * ids.length);
             winnerId = ids[randomIndex];
 
-            const circles = document.querySelectorAll('.finger-circle');
-            circles.forEach(circle => {
-                if (circle.id !== winnerId) {
-                    circle.style.transform = 'translate(-50%, -50%) scale(0)';
-                    setTimeout(() => circle.remove(), 200);
+            const fogs = document.querySelectorAll('.finger-fog');
+            fogs.forEach(fog => {
+                if (fog.id !== winnerId) {
+                    fog.style.opacity = '0';
+                    fog.style.transform = 'translate(-50%, -50%) scale(0)';
+                    setTimeout(() => fog.remove(), 300);
                 } else {
-                    circle.classList.remove('holding');
-                    circle.classList.add('winner');
-                    
+                    fog.className = 'finger-fog winner';
+                    // Mocniejsza wibracja dla zwycięzcy
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 }
             });
@@ -207,11 +249,11 @@
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 if (!activeTouches[touch.identifier]) {
-                    const chosenColor = colors[Math.abs(touch.identifier) % colors.length];
+                    const chosenColor = colorsRGB[Math.abs(touch.identifier) % colorsRGB.length];
                     activeTouches[touch.identifier] = {
                         x: touch.clientX,
                         y: touch.clientY,
-                        color: chosenColor
+                        colorRGB: chosenColor
                     };
                     anyNewFinger = true;
                 }
@@ -246,10 +288,17 @@
                 delete activeTouches[touch.identifier];
             }
 
-            if (Object.keys(activeTouches).length === 0) {
+            const remainingCount = Object.keys(activeTouches).length;
+
+            if (remainingCount === 0) {
+                // Twardy reset gry po zabraniu wszystkich palców
                 isFinished = false;
                 winnerId = null;
                 activeTouches = {};
+                stopCountdown();
+            } else if (remainingCount < 2 && !isFinished) {
+                // Przerwanie odliczania, jeśli zostało za mało graczy, a losowanie trwało
+                stopCountdown();
             }
 
             render();
