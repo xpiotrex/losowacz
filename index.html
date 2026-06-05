@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Losowanie Gracza</title>
+    <link rel="apple-touch-icon" href="icon.png"> <title>Losowanie Gracza</title>
     <style>
         * {
             box-sizing: border-box;
@@ -25,11 +25,9 @@
             background-color: #000000;
             overflow: hidden;
             touch-action: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* ARCHITEKTURA WARSTWOWA (Omija bugi iOS)
-           Wszystkie warstwy mają ten sam rozmiar i nakładają się na siebie 
-        */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -37,13 +35,11 @@
             left: max(env(safe-area-inset-left), 12px);
             right: max(env(safe-area-inset-right), 12px);
             border-radius: 36px;
-            pointer-events: none; /* Domyślnie przepuszczają dotyk do warstwy Canvas */
+            pointer-events: none; 
         }
 
-        /* WARSTWA 1: Tło ambientowe (Plazma) */
-        #layer-ambient {
-            overflow: hidden; /* Przycina plazmę do zaokrąglonych rogów */
-        }
+        /* WARSTWA 1: Tło ambientowe */
+        #layer-ambient { overflow: hidden; }
         .ambient-glow {
             position: absolute;
             border-radius: 50%;
@@ -61,23 +57,21 @@
             100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.4; }
         }
 
-        /* WARSTWA 2: Szkło (Tylko rozmywa to, co pod nim) */
+        /* WARSTWA 2: Szkło */
         #layer-glass {
             background: rgba(12, 12, 15, 0.4);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
         }
 
-        /* WARSTWA 3: Czarny rdzeń (Przyciemnia środek ekranu, uwydatnia kolory boków) */
+        /* WARSTWA 3: Czarny rdzeń */
         #layer-dark-core {
-            /* Idealny gradient bez użycia maskowania! */
             background: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0) 100%);
         }
 
-        /* WARSTWA 4: Animowana ramka obrysowa */
+        /* WARSTWA 4: Animowana ramka obrysowa - POPRAWIONA (Tajemnicza i pozbawiona bugów) */
         #layer-border {
-            padding: 2.5px; /* Grubość świetlnej ramki */
-            /* Puste wnęrze wycięte maską (wspierane w 100% na Safari) */
+            padding: 2px; 
             -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             -webkit-mask-composite: destination-out;
             mask-composite: exclude;
@@ -86,46 +80,45 @@
         .rotating-gradient {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
+            /* Zwiększona paleta kolorów, płynniejsze przejścia */
             background: conic-gradient(
                 from 0deg,
                 transparent 0%,
-                rgba(0, 255, 240, 1) 20%,
-                rgba(255, 0, 127, 1) 40%,
-                transparent 60%
+                rgba(0, 255, 240, 0.9) 15%,
+                rgba(123, 44, 191, 0.9) 30%,
+                rgba(255, 0, 127, 0.9) 50%,
+                rgba(255, 215, 0, 0.9) 70%,
+                transparent 85%
             );
-            animation: spin-border 3s linear infinite;
+            /* Ten blur sprawia, że krawędź nie ma graficznych "schodków" w Safari i wygląda jak tajemniczy neon */
+            filter: blur(6px); 
+            /* Spowolniona animacja dla bardziej relaksującego efektu */
+            animation: spin-border 6s linear infinite;
         }
         @keyframes spin-border { 100% { transform: rotate(360deg); } }
 
-        /* WARSTWA 5: Stała, szklana krawędź boczna (nadaje refleks ekranowi) */
+        /* WARSTWA 5: Szklana krawędź boczna */
         #layer-glass-edge {
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.05);
         }
 
-        /* WARSTWA 6: Pole gry (Łapie dotyk, renderuje mgły graczy) */
+        /* WARSTWA 6: Pole gry */
         #layer-canvas {
-            pointer-events: auto; /* Jako jedyna warstwa łapie dotyk! */
-            overflow: hidden; /* Przycina mgły do zaokrąglenia ekranu */
-            transform: translateZ(0); /* Wymuszenie przycinania dla Safari */
+            pointer-events: auto; 
+            overflow: hidden; 
+            transform: translateZ(0); 
         }
 
-        /* BAZA MGŁY PALCÓW (Wszystkie zmiany oparte o płynne transitions!) */
+        /* BAZA MGŁY PALCÓW */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
             pointer-events: none;
             z-index: 10;
-            
-            /* Startowe zmienne (Niewidoczne) */
             transform: translate(-50%, -50%) scale(0.1);
-            opacity: 0;
-            filter: brightness(1) blur(0px);
-            
-            /* Przejścia zapewniają miękki powrót w przypadku zabrania palca w trakcie */
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
-                        opacity 0.6s ease, 
-                        filter 0.6s ease;
+            opacity: 0; filter: brightness(1) blur(0px);
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, filter 0.6s ease;
         }
 
         .fog-visual {
@@ -134,19 +127,13 @@
             mix-blend-mode: screen;
             animation: subtle-breathe 1.5s infinite alternate ease-in-out;
         }
+        @keyframes subtle-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
 
-        @keyframes subtle-breathe {
-            0% { transform: scale(0.95); }
-            100% { transform: scale(1.05); }
-        }
-
-        /* STANY ODLICZANIA */
         .finger-fog.idle { transform: translate(-50%, -50%) scale(0.6); opacity: 0.6; }
         .finger-fog.stage-1 { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
         .finger-fog.stage-2 { transform: translate(-50%, -50%) scale(1.0); opacity: 0.9; }
         .finger-fog.stage-3 { transform: translate(-50%, -50%) scale(1.2); opacity: 1; filter: brightness(1.2); }
 
-        /* NARODZINY ZWYCIĘZCY */
         .finger-fog.winner {
             transform: translate(-50%, -50%) scale(2.8);
             opacity: 1; filter: brightness(1.6); z-index: 100;
@@ -158,22 +145,84 @@
         }
         @keyframes winner-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
 
-        /* ROZPROSZENIE (Puszczenie palca przegranego gracza) */
         .finger-fog.dispersing {
             transform: translate(-50%, -50%) scale(2.5) !important;
             opacity: 0 !important; filter: brightness(0.5) blur(30px) !important;
             transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease !important;
         }
 
-        /* POTĘŻNE ZALANIE OKNA (Gdy Zwycięzca puści palec) */
         .finger-fog.winner.dispersing {
-            /* Obłok uderza do x15 skali, obejmując absolutnie cały ekran */
             transform: translate(-50%, -50%) scale(15) !important; 
             opacity: 0 !important; filter: brightness(2.5) blur(30px) !important;
-            /* Rośnie i gaśnie w iście kinowy sposób */
-            transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), 
-                        filter 3.5s ease, 
-                        opacity 3.5s ease-in-out 1s !important; 
+            transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
+        }
+
+        /* --- UI: PRZYCISK INSTALACJI I MODAL --- */
+        #install-btn {
+            position: absolute;
+            bottom: max(env(safe-area-inset-bottom), 30px);
+            right: max(env(safe-area-inset-right), 30px);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 200; /* Nad ekranem gry */
+            display: none; /* Domyślnie ukryte, pokazywane przez JS w Safari */
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: background 0.2s, color 0.2s;
+        }
+        #install-btn:active { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+        #install-modal {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #install-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: rgba(25, 25, 30, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            width: 80%;
+            max-width: 320px;
+            text-align: center;
+            color: #fff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #install-modal.show .modal-content { transform: translateY(0); }
+        .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
+        .modal-content p { font-size: 15px; color: #aaa; line-height: 1.5; margin-bottom: 20px; }
+        .modal-content svg { width: 30px; fill: #007AFF; margin: 10px 0; }
+        .close-modal {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 15px;
+            width: 100%;
         }
     </style>
 </head>
@@ -184,10 +233,8 @@
         <div class="ambient-glow glow-2"></div>
         <div class="ambient-glow glow-3"></div>
     </div>
-    
     <div class="layer" id="layer-glass"></div>
     <div class="layer" id="layer-dark-core"></div>
-    
     <div class="layer" id="layer-border">
         <div class="rotating-gradient"></div>
     </div>
@@ -195,9 +242,21 @@
 
     <div class="layer" id="layer-canvas"></div>
 
+    <button id="install-btn">Zainstaluj Apkę</button>
+
+    <div id="install-modal">
+        <div class="modal-content">
+            <h3>Zainstaluj na pulpicie</h3>
+            <p>Aby gra działała na pełnym ekranie i bez paska adresu:</p>
+            <p>1. Kliknij ikonę <b>Udostępnij</b> na dolnym pasku (kwadrat ze strzałką).</p>
+            <p>2. Wybierz opcję <br><b>"Do ekranu początkowego"</b></p>
+            <button class="close-modal" id="close-modal-btn">Zrozumiałem</button>
+        </div>
+    </div>
+
     <script>
+        // LOGIKA GRY
         const canvas = document.getElementById('layer-canvas');
-        
         let activeTouches = {};
         let countdownTimer = null;
         let isFinished = false;
@@ -205,21 +264,13 @@
         let currentStage = 0;
 
         const colorsRGB = [
-            '0, 255, 240',   
-            '255, 0, 127',   
-            '123, 44, 191',  
-            '57, 255, 20',   
-            '255, 107, 0',   
-            '255, 215, 0',   
-            '0, 229, 255'    
+            '0, 255, 240', '255, 0, 127', '123, 44, 191',  
+            '57, 255, 20', '255, 107, 0', '255, 215, 0', '0, 229, 255'    
         ];
 
         function getRelativePos(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
+            return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
         function render() {
@@ -230,7 +281,7 @@
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
                         fog.removeAttribute('data-id'); 
-                        setTimeout(() => fog.remove(), 4500); // Czeka, aż wygasną nawet opóźnione efekty
+                        setTimeout(() => fog.remove(), 4500); 
                     }
                 }
             });
@@ -242,17 +293,15 @@
                 if (!fog) {
                     fog = document.createElement('div');
                     fog.id = `touch-${id}`;
-                    fog.className = 'finger-fog'; // Na start bez klasy, aby odpalić płynną animację
+                    fog.className = 'finger-fog';
                     fog.setAttribute('data-id', id);
                     fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
                     
                     const visual = document.createElement('div');
                     visual.className = 'fog-visual';
                     fog.appendChild(visual);
-                    
                     canvas.appendChild(fog);
                     
-                    // Wymuszenie reflow - konieczne aby przejście (transition) zadziałało z opóźnieniem
                     void fog.offsetWidth;
                     fog.classList.add('idle');
                 }
@@ -278,25 +327,17 @@
         }
 
         function stopCountdown() {
-            if (countdownTimer) {
-                clearInterval(countdownTimer);
-                countdownTimer = null;
-            }
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
             currentStage = 0;
             if (!isFinished) {
-                const fogs = document.querySelectorAll('.finger-fog');
-                fogs.forEach(fog => {
-                    if (!fog.classList.contains('dispersing')) {
-                        // Cofnięcie klasy do 'idle' - dzięki CSS transition obłok płynnie się kurczy
-                        fog.className = 'finger-fog idle';
-                    }
+                document.querySelectorAll('.finger-fog').forEach(fog => {
+                    if (!fog.classList.contains('dispersing')) fog.className = 'finger-fog idle';
                 });
             }
         }
 
         function applyStageClasses() {
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
+            document.querySelectorAll('.finger-fog').forEach(fog => {
                 if (fog.getAttribute('data-id') !== winnerId && !fog.classList.contains('dispersing')) {
                     fog.className = `finger-fog stage-${currentStage}`;
                 }
@@ -309,11 +350,9 @@
             if (ids.length < 2) return;
 
             isFinished = true;
-            const randomIndex = Math.floor(Math.random() * ids.length);
-            winnerId = ids[randomIndex];
+            winnerId = ids[Math.floor(Math.random() * ids.length)];
 
-            const fogs = document.querySelectorAll('.finger-fog');
-            fogs.forEach(fog => {
+            document.querySelectorAll('.finger-fog').forEach(fog => {
                 if (fog.getAttribute('data-id') !== winnerId) {
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
@@ -330,45 +369,32 @@
         function handleTouchStart(e) {
             e.preventDefault();
             if (isFinished) return;
-
             let anyNewFinger = false;
-
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 const touchId = String(touch.identifier);
-                
                 if (!activeTouches[touchId]) {
-                    const chosenColor = colorsRGB[Math.abs(touch.identifier) % colorsRGB.length];
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    
                     activeTouches[touchId] = {
-                        x: pos.x,
-                        y: pos.y,
-                        colorRGB: chosenColor
+                        x: getRelativePos(touch.clientX, touch.clientY).x,
+                        y: getRelativePos(touch.clientX, touch.clientY).y,
+                        colorRGB: colorsRGB[Math.abs(touch.identifier) % colorsRGB.length]
                     };
                     anyNewFinger = true;
                 }
             }
-            
             render();
-
-            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) {
-                startCountdown();
-            }
+            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) startCountdown();
         }
 
         function handleTouchMove(e) {
             e.preventDefault();
             if (isFinished) return;
-
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 const touchId = String(touch.identifier);
-                
                 if (activeTouches[touchId]) {
-                    const pos = getRelativePos(touch.clientX, touch.clientY);
-                    activeTouches[touchId].x = pos.x;
-                    activeTouches[touchId].y = pos.y;
+                    activeTouches[touchId].x = getRelativePos(touch.clientX, touch.clientY).x;
+                    activeTouches[touchId].y = getRelativePos(touch.clientX, touch.clientY).y;
                 }
             }
             render();
@@ -376,22 +402,13 @@
 
         function handleTouchEnd(e) {
             e.preventDefault();
-            
             for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                const touchId = String(touch.identifier);
-                delete activeTouches[touchId];
+                delete activeTouches[String(e.changedTouches[i].identifier)];
             }
-
-            render(); // Wymusza nadanie klasy ulatniania się nawet zwycięzcy
-
+            render();
             const remainingCount = Object.keys(activeTouches).length;
-
             if (remainingCount === 0) {
-                isFinished = false;
-                winnerId = null;
-                activeTouches = {};
-                stopCountdown();
+                isFinished = false; winnerId = null; activeTouches = {}; stopCountdown();
             } else if (remainingCount < 2 && !isFinished) {
                 stopCountdown();
             }
@@ -401,6 +418,35 @@
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+        // LOGIKA INSTALACJI PWA
+        const installBtn = document.getElementById('install-btn');
+        const installModal = document.getElementById('install-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // Funkcja sprawdzająca czy jesteśmy na iOS i czy apka nie jest jeszcze zainstalowana
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        // Pokaż przycisk tylko w Safari (nie w zainstalowanej PWA)
+        if (isIos() && !isInStandaloneMode()) {
+            installBtn.style.display = 'block';
+        }
+
+        // Obsługa kliknięć
+        installBtn.addEventListener('click', () => {
+            installModal.classList.add('show');
+        });
+        
+        closeModalBtn.addEventListener('click', () => {
+            installModal.classList.remove('show');
+        });
+
+        // Ukryj modal przy kliknięciu w tło
+        installModal.addEventListener('click', (e) => {
+            if (e.target === installModal) installModal.classList.remove('show');
+        });
+
     </script>
 </body>
 </html>
