@@ -29,7 +29,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* GŁÓWNA GEOMETRIA OKNA (Złoty standard krzywizny iPhone'a) */
+        /* PERFEKCYJNA GEOMETRIA SQUIRCLE (Standard Apple) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -51,7 +51,7 @@
             z-index: 2;
         }
 
-        /* TAJEMNICZA MGŁA BRZEGOWA (3/4 obwodu) */
+        /* TAJEMNICZA MGŁA BRZEGOWA (3/4 OBWODU) - Zredukowany blur dla węższego efektu */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -65,7 +65,7 @@
                 rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            filter: blur(40px);
+            filter: blur(25px); /* Zmniejszone rozmycie skupia światło bliżej krawędzi */
             animation: 
                 spin-sweep 14s linear infinite, 
                 pulse-opacity 4s ease-in-out infinite alternate;
@@ -80,33 +80,32 @@
                 rgba(0, 255, 240, 0.25) 25%,
                 transparent 50%
             );
-            filter: blur(45px);
+            filter: blur(30px);
             animation: spin-sweep-reverse 20s linear infinite;
         }
 
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
         @keyframes pulse-opacity {
-            0% { opacity: 0.5; transform: scale(0.98); }
-            100% { opacity: 1; transform: scale(1.02); }
+            0% { opacity: 0.4; transform: scale(0.98); }
+            100% { opacity: 0.9; transform: scale(1.02); }
         }
 
-        /* --- KONCENTRYCZNY RDZEŃ KORYGUJĄCY BŁĘDY SAFARI --- */
-        /* Użycie czystego filtra blur() na warstwach zamiast box-shadow całkowicie eliminuję deformację rogów */
+        /* --- SKORYGOWANY WĄSKI RDZEŃ (ZASADA APPLE KONCENTRYCZNOŚCI) --- */
         #layer-dark-core-soft {
             position: absolute;
-            inset: 24px; 
+            inset: 12px; /* Szerokość światła zmniejszona o połowę (było 24px) */
             background: #000000;
-            border-radius: 24px; /* MATEMATYKA: 48px - 24px = 24px (Perfekcyjna współśrodkowość) */
-            filter: blur(14px); /* Płynne, równe rozmycie bez efektu jajka */
+            border-radius: 36px; /* WZÓR: R_zewn (48px) - dystans (12px) = R_wewn (36px) */
+            filter: blur(8px); /* Delikatne dymne wygaszenie bez zniekształcania rogów */
             z-index: 3;
         }
 
         #layer-dark-core-solid {
             position: absolute;
-            inset: 44px; 
+            inset: 22px; 
             background: #000000;
-            border-radius: 4px; /* MATEMATYKA: 48px - 44px = 4px */
+            border-radius: 26px; /* WZÓR: 48px - 22px = 26px */
             z-index: 3.5;
         }
 
@@ -123,7 +122,7 @@
             z-index: 5;
         }
 
-        /* --- MECHANIKA GRY --- */
+        /* --- FINGER FOG --- */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -199,7 +198,7 @@
         #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* --- UI: MINIMALIST BARE ARROW ICON (NO CIRCLE) --- */
+        /* --- UI: PURE MINIMALIST ARROW ICON (NO CONTAINER) --- */
         #install-btn {
             position: absolute; 
             bottom: max(env(safe-area-inset-bottom), 30px); 
@@ -218,7 +217,7 @@
             width: 26px;
             height: 26px;
             fill: none;
-            stroke: rgba(255, 255, 255, 0.35); /* Elegancka szarość */
+            stroke: rgba(255, 255, 255, 0.35); 
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -249,9 +248,12 @@
 <body>
 
     <div class="layer" id="layer-glass"></div>
+    
     <div class="layer" id="layer-edge-glow">
-        <div class="sweeping-light"></div>
-        <div class="sweeping-light-dim"></div>
+        <div id="light-pivot" style="position: absolute; inset: 0; transform-origin: center center;">
+            <div class="sweeping-light"></div>
+            <div class="sweeping-light-dim"></div>
+        </div>
     </div>
     
     <div class="layer" id="layer-dark-core-soft"></div>
@@ -308,6 +310,15 @@
         function getRelativePos(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        // NOWOŚĆ: Funkcja rotująca punkt startowy mroku o losowy kąt
+        function randomizeGlowPosition() {
+            const pivot = document.getElementById('light-pivot');
+            if (pivot) {
+                const randomAngle = Math.floor(Math.random() * 360);
+                pivot.style.transform = `rotate(${randomAngle}deg)`;
+            }
         }
 
         function render() {
@@ -445,7 +456,11 @@
             render();
             const remainingCount = Object.keys(activeTouches).length;
             if (remainingCount === 0) {
-                isFinished = false; winnerId = null; activeTouches = {}; stopCountdown();
+                isFinished = false; 
+                winnerId = null; 
+                activeTouches = {}; 
+                stopCountdown();
+                randomizeGlowPosition(); // NOWOŚĆ: Losujemy pozycję mroku przy każdym resecie planszy!
             } else if (remainingCount < 2 && !isFinished) {
                 stopCountdown();
             }
@@ -487,6 +502,9 @@
         installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
         closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
         installModal.addEventListener('click', (e) => { if (e.target === installModal) installModal.classList.remove('show'); });
+
+        // Losowanie pozycji startowej przy pierwszym wejściu
+        randomizeGlowPosition();
     </script>
 </body>
 </html>
