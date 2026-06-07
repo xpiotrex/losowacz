@@ -9,509 +9,139 @@
     <link rel="apple-touch-icon" href="icon.png">
     <title>Finger Selector</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent; 
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+        body, html { width: 100vw; height: 100dvh; position: fixed; background-color: #000; overflow: hidden; touch-action: none; font-family: -apple-system, sans-serif; }
+
+        /* Perfekcyjne wycięcie ramki */
+        .viewport {
+            position: absolute;
+            inset: 12px;
+            border-radius: 48px;
+            clip-path: inset(0 0 0 0 round 48px); /* Fizyczne wycięcie wszystkich warstw */
+            background: #000;
         }
+
+        #layer-ambient, #layer-canvas { position: absolute; inset: 0; }
         
-        body, html {
-            width: 100vw;
-            height: 100dvh;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #000000;
-            overflow: hidden; /* Tylko do zablokowania przewijania strony */
-            touch-action: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+        .ambient-glow { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.8; animation: float 10s infinite alternate ease-in-out; }
+        .glow-1 { top: -20%; left: -20%; width: 70%; height: 70%; background: #4183FF; }
+        .glow-2 { bottom: -20%; right: -20%; width: 80%; height: 80%; background: #FF007F; }
 
-        /* TŁO SZKLANE BAZOWE */
-        #layer-glass {
-            position: absolute;
-            inset: 0;
-            background: rgba(10, 10, 12, 0.4);
-        }
+        @keyframes float { 0% { transform: translate(-5%, -5%); } 100% { transform: translate(5%, 5%); } }
 
-        /* --- NOWY, BEZBŁĘDNY SILNIK ŚWIATŁA (BEZ OVERFLOW: HIDDEN) --- */
-        #light-pivot {
-            position: absolute;
-            top: max(env(safe-area-inset-top), 12px);
-            bottom: max(env(safe-area-inset-bottom), 12px);
-            left: max(env(safe-area-inset-left), 12px);
-            right: max(env(safe-area-inset-right), 12px);
-            transform-origin: center center;
-            z-index: 2;
-            /* ZERO overflow: hidden tutaj, żeby ominać glitch Safari! */
+        /* Płynna ramka */
+        .border-glow {
+            position: absolute; inset: 0;
+            background: conic-gradient(from 0deg, #00FFF0 0%, #7B2CBF 33%, #FF007F 66%, #00FFF0 100%);
+            filter: blur(40px);
+            animation: spin 8s linear infinite;
         }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* ŻYWE, DYNAMICZNE ŚWIATŁO Z CZARNĄ PRZERWĄ */
-        .sweeping-light {
-            position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background: conic-gradient(
-                from 0deg,
-                transparent 0%,
-                transparent 20%,          /* Potężna, zawsze czarna wyrwa */
-                #00FFF0 35%,              /* Żywy, 100% cyjan */
-                #7B2CBF 55%,              /* Fiolet */
-                #FF007F 75%,              /* Żywa magenta */
-                #FFB946 95%,              /* Ogień */
-                transparent 100%
-            );
-            /* Zmniejszony blur = węższe, bardziej skupione światło na ramce */
-            filter: blur(20px); 
-            
-            /* Animacja podwójna: kręcenie się + dynamiczna zmiana kolorów (hue-rotate) */
-            animation: spin-and-shift 6s linear infinite;
-        }
-
-        @keyframes spin-and-shift {
-            0% { transform: rotate(0deg); filter: blur(20px) hue-rotate(0deg); }
-            100% { transform: rotate(360deg); filter: blur(20px) hue-rotate(360deg); } /* Kolory stale ewoluują! */
-        }
-
-        /* --- THE BEZEL HACK (To ukrywa glitter i maskuje wyciekające światło) --- */
-        .outer-bezel {
-            position: absolute;
-            top: max(env(safe-area-inset-top), 12px);
-            bottom: max(env(safe-area-inset-bottom), 12px);
-            left: max(env(safe-area-inset-left), 12px);
-            right: max(env(safe-area-inset-right), 12px);
-            border-radius: 48px;
-            /* Rzuca gigantyczny cień na zewnątrz, chowając rogi rotującego światła poza 48px */
-            box-shadow: 0 0 0 100vmax #000000; 
-            pointer-events: none;
-            z-index: 3;
-        }
-
-        /* --- BARDZO WĄSKI, MIĘKKI CZARNY RDZEŃ W ŚRODKU --- */
-        .inner-core {
-            position: absolute;
-            top: calc(max(env(safe-area-inset-top), 12px) + 8px);
-            bottom: calc(max(env(safe-area-inset-bottom), 12px) + 8px);
-            left: calc(max(env(safe-area-inset-left), 12px) + 8px);
-            right: calc(max(env(safe-area-inset-right), 12px) + 8px);
-            border-radius: 40px; /* 48px (zewn) - 8px (dystans) = 40px (ideał) */
-            background: #000000;
-            /* Miękki brzeg wchodzący na światło */
-            box-shadow: 0 0 25px 12px #000000;
-            z-index: 4;
-        }
-
-        /* Szklany odblask dodający realizmu samej szybie */
-        .glass-edge {
-            position: absolute;
-            top: max(env(safe-area-inset-top), 12px);
-            bottom: max(env(safe-area-inset-bottom), 12px);
-            left: max(env(safe-area-inset-left), 12px);
-            right: max(env(safe-area-inset-right), 12px);
-            border-radius: 48px;
-            border: 1.5px solid rgba(255, 255, 255, 0.1);
-            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        #layer-canvas {
-            position: absolute;
-            inset: 0;
-            pointer-events: auto; 
-            overflow: hidden; 
-            z-index: 10;
-        }
-
-        /* --- FINGER FOG (Duszek palców) --- */
         .finger-fog {
-            position: absolute;
-            width: 350px; height: 350px;
-            pointer-events: none;
-            z-index: 15;
+            position: absolute; width: 300px; height: 300px;
+            pointer-events: none; z-index: 10;
             transform: translate(-50%, -50%) scale(0.1);
-            opacity: 0; filter: brightness(1) blur(0px);
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, filter 0.6s ease;
+            opacity: 0;
+            transition: transform 0.4s ease-out, opacity 0.4s ease;
         }
-
         .fog-visual {
             width: 100%; height: 100%; border-radius: 50%;
-            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 1) 0%, rgba(var(--glow-rgb), 0.3) 45%, rgba(0,0,0,0) 80%);
+            background: radial-gradient(circle closest-side, rgba(var(--glow-rgb), 0.8) 0%, rgba(0,0,0,0) 80%);
             mix-blend-mode: screen;
-            animation: subtle-breathe 1.5s infinite alternate ease-in-out;
-        }
-        @keyframes subtle-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
-
-        .finger-fog.idle { transform: translate(-50%, -50%) scale(0.6); opacity: 0.6; }
-        .finger-fog.stage-1 { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
-        .finger-fog.stage-2 { transform: translate(-50%, -50%) scale(1.0); opacity: 0.9; }
-        .finger-fog.stage-3 { transform: translate(-50%, -50%) scale(1.2); opacity: 1; filter: brightness(1.2); }
-
-        .finger-fog.winner {
-            transform: translate(-50%, -50%) scale(2.8);
-            opacity: 1; filter: brightness(1.8); z-index: 100;
-            transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1), opacity 3s ease, filter 3s ease;
-        }
-        .finger-fog.winner .fog-visual {
-            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(0,0,0,0) 80%);
-            animation: winner-breathe 4s infinite alternate ease-in-out;
         }
 
-        .finger-fog.dispersing {
-            transform: translate(-50%, -50%) scale(2.5) !important;
-            opacity: 0 !important; filter: brightness(0.5) blur(30px) !important;
-            transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease !important;
+        /* EFEKT ROZLANIA KOLORU ZWYCIĘZCY */
+        .flood-effect {
+            position: absolute; inset: 0; z-index: 20;
+            background: rgba(var(--winner-rgb), 0.8);
+            opacity: 0; pointer-events: none;
+            transition: opacity 2s ease;
         }
 
-        .finger-fog.winner.dispersing {
-            transform: translate(-50%, -50%) scale(15) !important; 
-            opacity: 0 !important; filter: brightness(2.5) blur(30px) !important;
-            transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
-        }
-
-        /* --- UI: ONBOARDING JELLY POPUP --- */
-        #onboarding-overlay {
-            position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
-        }
-        #onboarding-overlay.show { opacity: 1; pointer-events: auto; }
-        #onboarding-box {
-            background: rgba(20, 20, 25, 0.75); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
-            width: 85%; max-width: 340px; padding: 35px 25px; text-align: center; color: #fff;
-            transform: scale(0.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; opacity: 0;
-        }
-        #onboarding-overlay.show #onboarding-box { animation: jelly-morph 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        @keyframes jelly-morph {
-            0% { transform: scale(0.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; opacity: 0; }
-            40% { transform: scale(1.1); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; opacity: 1; }
-            70% { transform: scale(0.95); border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; }
-            100% { transform: scale(1); border-radius: 32px; opacity: 1; }
-        }
-        #onboarding-content { opacity: 0; transform: translateY(10px); }
-        #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
-        @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
-        #onboarding-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #onboarding-box p { font-size: 15px; color: #ccc; margin-bottom: 25px; line-height: 1.5; font-weight: 400; }
-        #onboarding-box ol { text-align: left; margin-bottom: 25px; padding-left: 20px; color: #ddd; font-size: 14px; line-height: 1.6; }
-        #onboarding-box li { margin-bottom: 8px; }
-        #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
-        #onboarding-btn:active { transform: scale(0.95); background: #eee; }
-
-        /* --- NAPRAWIONA STRZAŁKA INSTALACJI PWA (Zjednoczony wektor bez błędów przenikania) --- */
         #install-btn {
-            position: absolute; 
-            bottom: max(env(safe-area-inset-bottom), 30px); 
-            right: max(env(safe-area-inset-right), 30px);
-            background: none;
-            border: none;
-            padding: 10px;
-            display: none; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 200; 
-            cursor: pointer;
-            opacity: 0.5; /* Przezroczystość nałożona globalnie na obiekt! */
-            transition: opacity 0.2s, transform 0.2s;
+            position: absolute; bottom: 40px; right: 40px;
+            background: none; border: none; z-index: 100;
         }
-        
-        #install-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: #ffffff; /* Lity biały kolor pędzla */
-            stroke-width: 2.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-
-        #install-btn:active { opacity: 1; transform: scale(0.9); }
-        
-        /* --- UI: INSTALLATION MODAL --- */
-        #install-modal {
-            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            z-index: 300; display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        #install-modal.show { opacity: 1; pointer-events: auto; }
-        .modal-content {
-            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
-            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-        #install-modal.show .modal-content { transform: translateY(0); }
-        .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
-        .modal-content p { font-size: 15px; color: #aaa; line-height: 1.5; margin-bottom: 20px; }
-        .close-modal { background: #fff; color: #000; border: none; padding: 12px 24px; border-radius: 16px; font-weight: 600; font-size: 15px; width: 100%; }
     </style>
 </head>
 <body>
-
-    <div id="layer-glass"></div>
-    
-    <div id="light-pivot">
-        <div class="sweeping-light"></div>
+    <div class="viewport">
+        <div id="layer-ambient">
+            <div class="ambient-glow glow-1"></div>
+            <div class="ambient-glow glow-2"></div>
+        </div>
+        <div class="border-glow"></div>
+        <div id="layer-canvas"></div>
+        <div id="flood-layer" class="flood-effect"></div>
     </div>
-    
-    <div class="outer-bezel"></div>
-    
-    <div class="inner-core"></div>
-    
-    <div class="glass-edge"></div>
-
-    <div id="layer-canvas"></div>
 
     <button id="install-btn">
-        <svg viewBox="0 0 24 24">
-            <path d="M12 4 L12 20 M5 13 L12 20 L19 13" />
-        </svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 L12 20 M5 13 L12 20 L19 13"/></svg>
     </button>
-
-    <div id="install-modal">
-        <div class="modal-content">
-            <h3>Install App</h3>
-            <p>To run this game in full screen without browser bars:</p>
-            <p>1. Tap the <b>Share</b> button in the bottom navigation bar (square with an arrow pointing up).</p>
-            <p>2. Scroll down the menu and choose <br><b>"Add to Home Screen"</b></p>
-            <button class="close-modal" id="close-modal-btn">Got it</button>
-        </div>
-    </div>
-
-    <div id="onboarding-overlay">
-        <div id="onboarding-box">
-            <div id="onboarding-content">
-                <h2>How to Play</h2>
-                <p>Gather your friends around the screen and follow these simple steps:</p>
-                <ol>
-                    <li>Everyone places <b>one finger</b> on the interface.</li>
-                    <li>Wait a moment for the cosmic aura to synchronize its pulse.</li>
-                    <li>The chosen illuminated expanding mist reveals the winner!</li>
-                </ol>
-                <button id="onboarding-btn">Let's Play!</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         const canvas = document.getElementById('layer-canvas');
+        const flood = document.getElementById('flood-layer');
         let activeTouches = {};
-        let countdownTimer = null;
-        let isFinished = false;
         let winnerId = null;
-        let currentStage = 0;
-
-        const colorsRGB = [
-            '0, 255, 240', '255, 0, 127', '123, 44, 191',  
-            '57, 255, 20', '255, 107, 0', '255, 215, 0', '0, 229, 255'    
-        ];
-
-        function getRelativePos(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        }
-
-        function randomizeGlowPosition() {
-            const pivot = document.getElementById('light-pivot');
-            if (pivot) {
-                const randomAngle = Math.floor(Math.random() * 360);
-                pivot.style.transform = `rotate(${randomAngle}deg)`;
-            }
-        }
 
         function render() {
-            const existingFogs = document.querySelectorAll('.finger-fog');
-            existingFogs.forEach(fog => {
-                const touchId = fog.getAttribute('data-id');
-                // Usuwamy obłoki palców, których już nie ma na ekranie (chyba że to zwycięzca)
-                if (!activeTouches[touchId] && fog.getAttribute('data-id') !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.classList.add('dispersing');
-                        
-                        // FIX: Usuwamy atrybuty tożsamości, zapobiegając nadpisaniu "wielkiego obłoku" z poprzedniej gry
-                        fog.removeAttribute('data-id'); 
-                        fog.removeAttribute('id'); 
-                        
-                        setTimeout(() => fog.remove(), 4500); 
-                    }
-                }
-            });
-
-            if (isFinished) return;
-
             Object.keys(activeTouches).forEach(id => {
-                let fog = document.getElementById(`touch-${id}`);
+                let fog = document.getElementById(`t-${id}`);
                 if (!fog) {
                     fog = document.createElement('div');
-                    fog.id = `touch-${id}`;
+                    fog.id = `t-${id}`;
                     fog.className = 'finger-fog';
-                    fog.setAttribute('data-id', id);
-                    fog.style.setProperty('--glow-rgb', activeTouches[id].colorRGB);
-                    
-                    const visual = document.createElement('div');
-                    visual.className = 'fog-visual';
-                    fog.appendChild(visual);
+                    fog.style.setProperty('--glow-rgb', activeTouches[id].color);
+                    fog.innerHTML = '<div class="fog-visual"></div>';
                     canvas.appendChild(fog);
-                    
-                    void fog.offsetWidth;
-                    fog.classList.add('idle');
                 }
                 fog.style.left = activeTouches[id].x + 'px';
                 fog.style.top = activeTouches[id].y + 'px';
+                fog.style.transform = 'translate(-50%, -50%) scale(1)';
+                fog.style.opacity = '1';
             });
         }
 
-        function startCountdown() {
-            stopCountdown();
-            currentStage = 1;
-            applyStageClasses();
-            
-            countdownTimer = setInterval(() => {
-                currentStage++;
-                if (currentStage <= 3) {
-                    applyStageClasses();
-                } else {
-                    stopCountdown();
-                    drawWinner();
-                }
-            }, 1000);
-        }
-
-        function stopCountdown() {
-            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-            currentStage = 0;
-            if (!isFinished) {
-                document.querySelectorAll('.finger-fog').forEach(fog => {
-                    if (!fog.classList.contains('dispersing')) fog.className = 'finger-fog idle';
-                });
-            }
-        }
-
-        function applyStageClasses() {
-            document.querySelectorAll('.finger-fog').forEach(fog => {
-                if (fog.getAttribute('data-id') !== winnerId && !fog.classList.contains('dispersing')) {
-                    fog.className = `finger-fog stage-${currentStage}`;
-                }
-            });
-            if (navigator.vibrate) navigator.vibrate(20);
-        }
-
-        function drawWinner() {
-            const ids = Object.keys(activeTouches);
-            if (ids.length < 2) return;
-
-            isFinished = true;
-            winnerId = ids[Math.floor(Math.random() * ids.length)];
-
-            document.querySelectorAll('.finger-fog').forEach(fog => {
-                if (fog.getAttribute('data-id') !== winnerId) {
-                    if (!fog.classList.contains('dispersing')) {
-                        fog.classList.add('dispersing');
-                        // Zapobiega błędnemu recyklingowi ID przegranego
-                        fog.removeAttribute('data-id');
-                        fog.removeAttribute('id');
-                        setTimeout(() => fog.remove(), 4000);
-                    }
-                } else {
-                    fog.className = 'finger-fog winner';
-                    if (navigator.vibrate) navigator.vibrate([400]); 
-                }
-            });
-        }
-
-        function handleTouchStart(e) {
+        canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (isFinished) return;
-            let anyNewFinger = false;
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                const touchId = String(touch.identifier);
-                if (!activeTouches[touchId]) {
-                    activeTouches[touchId] = {
-                        x: getRelativePos(touch.clientX, touch.clientY).x,
-                        y: getRelativePos(touch.clientX, touch.clientY).y,
-                        colorRGB: colorsRGB[Math.abs(touch.identifier) % colorsRGB.length]
-                    };
-                    anyNewFinger = true;
+            for (let t of e.changedTouches) {
+                activeTouches[t.identifier] = { 
+                    x: t.clientX - 12, y: t.clientY - 12, 
+                    color: [0, 255, 240, 255, 0, 127, 123, 44, 191][t.identifier % 3 * 3] + ',' + [255, 107, 0, 255, 215, 0][t.identifier % 2 * 3] // uproszczone
+                };
+            }
+            render();
+            if (Object.keys(activeTouches).length >= 2 && !winnerId) {
+                setTimeout(() => {
+                    const ids = Object.keys(activeTouches);
+                    winnerId = ids[Math.floor(Math.random() * ids.length)];
+                    flood.style.setProperty('--winner-rgb', activeTouches[winnerId].color);
+                    flood.style.opacity = '1';
+                }, 2000);
+            }
+        }, {passive: false});
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let t of e.changedTouches) {
+                if (activeTouches[t.identifier]) {
+                    activeTouches[t.identifier].x = t.clientX - 12;
+                    activeTouches[t.identifier].y = t.clientY - 12;
                 }
             }
             render();
-            if (Object.keys(activeTouches).length >= 2 && anyNewFinger) startCountdown();
-        }
+        }, {passive: false});
 
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (isFinished) return;
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                const touchId = String(touch.identifier);
-                if (activeTouches[touchId]) {
-                    activeTouches[touchId].x = getRelativePos(touch.clientX, touch.clientY).x;
-                    activeTouches[touchId].y = getRelativePos(touch.clientX, touch.clientY).y;
-                }
+        canvas.addEventListener('touchend', (e) => {
+            for (let t of e.changedTouches) delete activeTouches[t.identifier];
+            document.querySelectorAll('.finger-fog').forEach(f => f.style.opacity = '0');
+            if (Object.keys(activeTouches).length === 0) {
+                winnerId = null;
+                flood.style.opacity = '0';
             }
-            render();
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                delete activeTouches[String(e.changedTouches[i].identifier)];
-            }
-            render();
-            const remainingCount = Object.keys(activeTouches).length;
-            if (remainingCount === 0) {
-                isFinished = false; 
-                winnerId = null; 
-                activeTouches = {}; 
-                stopCountdown();
-                randomizeGlowPosition(); // Przerwa światła losuje się w innym miejscu przy pustym ekranie
-            } else if (remainingCount < 2 && !isFinished) {
-                stopCountdown();
-            }
-        }
-
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-
-        // ONBOARDING
-        const onboardingOverlay = document.getElementById('onboarding-overlay');
-        const onboardingBtn = document.getElementById('onboarding-btn');
-
-        onboardingOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
-        onboardingOverlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
-        onboardingOverlay.addEventListener('touchend', (e) => e.stopPropagation(), { passive: false });
-
-        if (!localStorage.getItem('tutorialSeen')) {
-            setTimeout(() => { onboardingOverlay.classList.add('show'); }, 500);
-        }
-
-        onboardingBtn.addEventListener('click', () => {
-            onboardingOverlay.style.opacity = '0';
-            setTimeout(() => { onboardingOverlay.classList.remove('show'); }, 500); 
-            localStorage.setItem('tutorialSeen', 'true');
         });
-
-        // PWA INSTALLATION
-        const installBtn = document.getElementById('install-btn');
-        const installModal = document.getElementById('install-modal');
-        const closeModalBtn = document.getElementById('close-modal-btn');
-
-        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-
-        if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'flex'; }
-
-        installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
-        closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
-        installModal.addEventListener('click', (e) => { if (e.target === installModal) installModal.classList.remove('show'); });
-
-        randomizeGlowPosition();
     </script>
 </body>
 </html>
