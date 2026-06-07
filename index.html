@@ -39,65 +39,84 @@
             pointer-events: none; 
         }
 
-        #layer-ambient { overflow: hidden; }
-        .ambient-glow {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(50px); 
-            opacity: 0.6; 
-            animation: float 12s infinite alternate ease-in-out;
-        }
-        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #4183FF; animation-delay: 0s; }
-        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #E049FF; animation-delay: -3s; }
-        .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #FFB946; animation-delay: -6s; }
-
-        @keyframes float {
-            0% { transform: scale(0.8) translate(0, 0); opacity: 0.2; }
-            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.6; }
-            100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.3; }
-        }
-
+        /* TŁO SZKLANE BAZOWE */
         #layer-glass {
-            background: rgba(10, 10, 12, 0.5);
+            background: rgba(10, 10, 12, 0.4);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
         }
 
-        #layer-dark-core {
-            background: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%);
+        /* --- NOWOŚĆ: VOLUMETRIC EDGE GLOW --- */
+        /* Kontener przycina światło idealnie do rogów ekranu */
+        #layer-edge-glow {
+            overflow: hidden; 
+            z-index: 2;
         }
 
-        #layer-siri-glow {
-            overflow: hidden;
-            -webkit-mask-image: radial-gradient(ellipse at center, transparent 75%, black 100%);
-            mask-image: radial-gradient(ellipse at center, transparent 75%, black 100%);
-            z-index: 3;
-            opacity: 0.8;
-        }
-
-        .siri-gradient {
+        /* Wędrujące światło. Obejmuje 3/4 koła (reszta to przezroczystość) */
+        .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
             background: conic-gradient(
                 from 0deg,
-                rgba(65, 131, 255, 0.8) 0%,   
-                rgba(224, 73, 255, 0.8) 25%,  
-                rgba(255, 114, 114, 0.8) 50%, 
-                rgba(255, 185, 70, 0.8) 75%,  
-                rgba(65, 131, 255, 0.8) 100%
+                transparent 0%,
+                transparent 15%,
+                rgba(30, 80, 255, 0.9) 30%,   /* Głęboki błękit */
+                rgba(160, 40, 255, 0.9) 50%,  /* Fiolet */
+                rgba(255, 0, 127, 0.9) 70%,   /* Tajemniczy róż */
+                rgba(255, 185, 70, 0.9) 85%,  /* Bursztyn na czele */
+                transparent 100%
             );
-            filter: blur(60px); 
-            animation: spin-siri 15s linear infinite;
+            /* Potężny blur zamienia ostre krawędzie w płynną chmurę neonu */
+            filter: blur(45px);
+            /* Animacja rotacji + tajemnicze pulsowanie (oddychanie) */
+            animation: 
+                spin-sweep 12s linear infinite, 
+                pulse-opacity 4s ease-in-out infinite alternate;
         }
 
-        @keyframes spin-siri { 100% { transform: rotate(360deg); } }
+        /* Druga, malutka i bardzo delikatna poświata kręcąca się w drugą stronę dla mroku */
+        .sweeping-light-dim {
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(
+                from 180deg,
+                transparent 0%,
+                rgba(0, 255, 240, 0.3) 20%,
+                transparent 40%
+            );
+            filter: blur(50px);
+            animation: spin-sweep-reverse 18s linear infinite;
+        }
 
+        @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
+        @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
+        @keyframes pulse-opacity {
+            0% { opacity: 0.5; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        /* --- NOWY, PERFEKCYJNY CZARNY RDZEŃ --- */
+        /* Zamiast maski elipsy stosujemy fizyczny, czarny box wewnątrz, 
+           który rzuca potężny miękki cień. Dzięki temu światło układa się
+           idealnie równo wzdłuż wszystkich prostych krawędzi! */
+        #layer-dark-core {
+            position: absolute;
+            inset: 22px; /* Dystans od krawędzi – decyduje o grubości światła */
+            background: #000000;
+            border-radius: 20px; /* Nieco mniejszy promień dla wnętrza */
+            box-shadow: 0 0 35px 15px #000000; /* Rozmywa czerń płynnie do samej krawędzi */
+            z-index: 3;
+        }
+
+        /* Szklana krawędź boczna (refleks szkła) */
         #layer-glass-edge {
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03);
             z-index: 4;
         }
 
+        /* WARSTWA GRY */
         #layer-canvas {
             pointer-events: auto; 
             overflow: hidden; 
@@ -105,6 +124,7 @@
             z-index: 5;
         }
 
+        /* --- MECHANIKA MGŁY PALCÓW --- */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -167,10 +187,7 @@
             transition: opacity 0.5s ease;
         }
         
-        #onboarding-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        #onboarding-overlay.show { opacity: 1; pointer-events: auto; }
 
         #onboarding-box {
             background: rgba(20, 20, 25, 0.75);
@@ -183,93 +200,40 @@
             padding: 35px 25px;
             text-align: center;
             color: #fff;
-            
-            /* Stan początkowy przed animacją - mały żelek */
             transform: scale(0.1);
             border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
             opacity: 0;
         }
 
-        /* Animacja formującego się glutka wprost w szkło */
         #onboarding-overlay.show #onboarding-box {
             animation: jelly-morph 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
 
         @keyframes jelly-morph {
-            0% { 
-                transform: scale(0.1); 
-                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; 
-                opacity: 0; 
-            }
-            40% { 
-                transform: scale(1.1); 
-                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; 
-                opacity: 1; 
-            }
-            70% { 
-                transform: scale(0.95); 
-                border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; 
-            }
-            100% { 
-                transform: scale(1); 
-                border-radius: 32px; /* Finalna twarda forma */
-                opacity: 1; 
-            }
+            0% { transform: scale(0.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; opacity: 0; }
+            40% { transform: scale(1.1); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; opacity: 1; }
+            70% { transform: scale(0.95); border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; }
+            100% { transform: scale(1); border-radius: 32px; opacity: 1; }
         }
 
-        /* Zawartość pojawia się dopiero, gdy szkło się uspokoi */
-        #onboarding-content {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        #onboarding-overlay.show #onboarding-content {
-            animation: fade-in-up 0.5s ease forwards 0.8s;
-        }
-
-        @keyframes fade-in-up {
-            to { opacity: 1; transform: translateY(0); }
-        }
+        #onboarding-content { opacity: 0; transform: translateY(10px); }
+        #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
+        @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
 
         #onboarding-box h2 {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 15px;
+            font-size: 22px; font-weight: 700; margin-bottom: 15px;
             background: linear-gradient(135deg, #fff, #aaa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        #onboarding-box p {
-            font-size: 15px;
-            color: #ccc;
-            margin-bottom: 25px;
-            line-height: 1.5;
-            font-weight: 400;
-        }
-
-        #onboarding-box ol {
-            text-align: left;
-            margin-bottom: 25px;
-            padding-left: 20px;
-            color: #ddd;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
+        #onboarding-box p { font-size: 15px; color: #ccc; margin-bottom: 25px; line-height: 1.5; font-weight: 400; }
+        #onboarding-box ol { text-align: left; margin-bottom: 25px; padding-left: 20px; color: #ddd; font-size: 14px; line-height: 1.6; }
         #onboarding-box li { margin-bottom: 8px; }
 
         #onboarding-btn {
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 14px 30px;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s, background 0.2s;
+            background: #fff; color: #000; border: none; padding: 14px 30px;
+            border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer;
+            width: 100%; transition: transform 0.2s, background 0.2s;
         }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
@@ -296,56 +260,34 @@
         #install-btn:active { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
         #install-modal {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            z-index: 300;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            z-index: 300; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
         #install-modal.show { opacity: 1; pointer-events: auto; }
         .modal-content {
-            background: rgba(25, 25, 30, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 30px;
-            width: 80%;
-            max-width: 320px;
-            text-align: center;
-            color: #fff;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            transform: translateY(20px);
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
+            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #install-modal.show .modal-content { transform: translateY(0); }
         .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
         .modal-content p { font-size: 15px; color: #aaa; line-height: 1.5; margin-bottom: 20px; }
-        .close-modal {
-            background: #fff; color: #000; border: none; padding: 12px 24px;
-            border-radius: 16px; font-weight: 600; font-size: 15px; width: 100%;
-        }
+        .close-modal { background: #fff; color: #000; border: none; padding: 12px 24px; border-radius: 16px; font-weight: 600; font-size: 15px; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div class="layer" id="layer-ambient">
-        <div class="ambient-glow glow-1"></div>
-        <div class="ambient-glow glow-2"></div>
-        <div class="ambient-glow glow-3"></div>
-    </div>
-    
     <div class="layer" id="layer-glass"></div>
-    <div class="layer" id="layer-dark-core"></div>
     
-    <div class="layer" id="layer-siri-glow">
-        <div class="siri-gradient"></div>
+    <div class="layer" id="layer-edge-glow">
+        <div class="sweeping-light"></div>
+        <div class="sweeping-light-dim"></div>
     </div>
+    
+    <div class="layer" id="layer-dark-core"></div>
     
     <div class="layer" id="layer-glass-edge"></div>
     <div class="layer" id="layer-canvas"></div>
@@ -541,27 +483,21 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-        // LOGIKA ONBOARDINGU (Tutorial pojawia się tylko raz)
+        // LOGIKA ONBOARDINGU
         const onboardingOverlay = document.getElementById('onboarding-overlay');
         const onboardingBtn = document.getElementById('onboarding-btn');
 
-        // Zatrzymujemy eventy dotyku, żeby palce nie przebijały do gry podczas czytania instrukcji
         onboardingOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
         onboardingOverlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
         onboardingOverlay.addEventListener('touchend', (e) => e.stopPropagation(), { passive: false });
 
         if (!localStorage.getItem('tutorialSeen')) {
-            // Opóźnienie 500ms dla dramatycznego efektu pojawienia się
-            setTimeout(() => {
-                onboardingOverlay.classList.add('show');
-            }, 500);
+            setTimeout(() => { onboardingOverlay.classList.add('show'); }, 500);
         }
 
         onboardingBtn.addEventListener('click', () => {
             onboardingOverlay.style.opacity = '0';
-            setTimeout(() => {
-                onboardingOverlay.classList.remove('show');
-            }, 500); // Czeka na fade-out
+            setTimeout(() => { onboardingOverlay.classList.remove('show'); }, 500); 
             localStorage.setItem('tutorialSeen', 'true');
         });
 
@@ -573,21 +509,11 @@
         const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
 
-        if (isIos() && !isInStandaloneMode()) {
-            installBtn.style.display = 'block';
-        }
+        if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'block'; }
 
-        installBtn.addEventListener('click', () => {
-            installModal.classList.add('show');
-        });
-        
-        closeModalBtn.addEventListener('click', () => {
-            installModal.classList.remove('show');
-        });
-
-        installModal.addEventListener('click', (e) => {
-            if (e.target === installModal) installModal.classList.remove('show');
-        });
+        installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
+        closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
+        installModal.addEventListener('click', (e) => { if (e.target === installModal) installModal.classList.remove('show'); });
     </script>
 </body>
 </html>
