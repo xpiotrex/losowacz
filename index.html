@@ -29,7 +29,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* PERFEKCYJNA GEOMETRIA SQUIRCLE (Standard Apple) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -46,12 +45,14 @@
             -webkit-backdrop-filter: blur(30px);
         }
 
+        /* FIX 1: Wymuszenie akceleracji sprzętowej, by usunąć "glitter" w Safari */
         #layer-edge-glow {
             overflow: hidden; 
             z-index: 2;
+            transform: translateZ(0); 
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
         }
 
-        /* TAJEMNICZA MGŁA BRZEGOWA (3/4 OBWODU) - Zredukowany blur dla węższego efektu */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -65,7 +66,10 @@
                 rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            filter: blur(25px); /* Zmniejszone rozmycie skupia światło bliżej krawędzi */
+            filter: blur(25px); 
+            /* FIX 1: will-change wymusza osobną warstwę graficzną w GPU - koniec z szumem na brzegach! */
+            will-change: transform, opacity;
+            backface-visibility: hidden;
             animation: 
                 spin-sweep 14s linear infinite, 
                 pulse-opacity 4s ease-in-out infinite alternate;
@@ -81,6 +85,8 @@
                 transparent 50%
             );
             filter: blur(30px);
+            will-change: transform;
+            backface-visibility: hidden;
             animation: spin-sweep-reverse 20s linear infinite;
         }
 
@@ -91,21 +97,22 @@
             100% { opacity: 0.9; transform: scale(1.02); }
         }
 
-        /* --- SKORYGOWANY WĄSKI RDZEŃ (ZASADA APPLE KONCENTRYCZNOŚCI) --- */
+        /* WĄSKI RDZEŃ */
         #layer-dark-core-soft {
             position: absolute;
-            inset: 12px; /* Szerokość światła zmniejszona o połowę (było 24px) */
+            inset: 12px; 
             background: #000000;
-            border-radius: 36px; /* WZÓR: R_zewn (48px) - dystans (12px) = R_wewn (36px) */
-            filter: blur(8px); /* Delikatne dymne wygaszenie bez zniekształcania rogów */
+            border-radius: 36px; 
+            filter: blur(8px); 
             z-index: 3;
+            transform: translateZ(0); /* Zabezpieczenie rozmycia */
         }
 
         #layer-dark-core-solid {
             position: absolute;
             inset: 22px; 
             background: #000000;
-            border-radius: 26px; /* WZÓR: 48px - 22px = 26px */
+            border-radius: 26px; 
             z-index: 3.5;
         }
 
@@ -198,7 +205,7 @@
         #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* --- UI: PURE MINIMALIST ARROW ICON (NO CONTAINER) --- */
+        /* FIX 2: Zaktualizowana strzałka. Opacity jest na wektorze jako całości, a nie na poszczególnych pociągnięciach (brak nałożeń). */
         #install-btn {
             position: absolute; 
             bottom: max(env(safe-area-inset-bottom), 30px); 
@@ -217,13 +224,14 @@
             width: 26px;
             height: 26px;
             fill: none;
-            stroke: rgba(255, 255, 255, 0.35); 
+            stroke: #ffffff; /* Lity kolor, brak alphy */
+            opacity: 0.35; /* Alpha kontrolowana na poziomie całego obiektu = Boolean Union! */
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
-            transition: stroke 0.2s, transform 0.2s;
+            transition: opacity 0.2s, transform 0.2s;
         }
-        #install-btn:active svg { stroke: rgba(255, 255, 255, 0.75); transform: scale(0.9); }
+        #install-btn:active svg { opacity: 0.75; transform: scale(0.9); }
         
         /* --- UI: INSTALLATION MODAL --- */
         #install-modal {
@@ -264,8 +272,7 @@
 
     <button id="install-btn">
         <svg viewBox="0 0 24 24">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <polyline points="19 12 12 19 5 12"></polyline>
+            <path d="M12 5 V19 M5 12 L12 19 L19 12" />
         </svg>
     </button>
 
@@ -312,7 +319,6 @@
             return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
-        // NOWOŚĆ: Funkcja rotująca punkt startowy mroku o losowy kąt
         function randomizeGlowPosition() {
             const pivot = document.getElementById('light-pivot');
             if (pivot) {
@@ -329,6 +335,9 @@
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
                         fog.removeAttribute('data-id'); 
+                        // FIX 3: Usuwamy na zawsze atrybut ID z DOM. Jeśli iOS podłoży stary numer palca,
+                        // nowa gra zignoruje starego ulatniającego się duszka i zrobi świeży obiekt!
+                        fog.removeAttribute('id'); 
                         setTimeout(() => fog.remove(), 4500); 
                     }
                 }
@@ -405,6 +414,7 @@
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
                         fog.removeAttribute('data-id');
+                        fog.removeAttribute('id'); // Zabezpieczenie przed błędem iOS ID
                         setTimeout(() => fog.remove(), 4000);
                     }
                 } else {
@@ -460,7 +470,7 @@
                 winnerId = null; 
                 activeTouches = {}; 
                 stopCountdown();
-                randomizeGlowPosition(); // NOWOŚĆ: Losujemy pozycję mroku przy każdym resecie planszy!
+                randomizeGlowPosition(); 
             } else if (remainingCount < 2 && !isFinished) {
                 stopCountdown();
             }
@@ -503,7 +513,6 @@
         closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
         installModal.addEventListener('click', (e) => { if (e.target === installModal) installModal.classList.remove('show'); });
 
-        // Losowanie pozycji startowej przy pierwszym wejściu
         randomizeGlowPosition();
     </script>
 </body>
