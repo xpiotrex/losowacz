@@ -35,8 +35,8 @@
             bottom: max(env(safe-area-inset-bottom), 12px);
             left: max(env(safe-area-inset-left), 12px);
             right: max(env(safe-area-inset-right), 12px);
-            /* Zewnętrzny promień to 36px */
-            border-radius: 36px;
+            /* Zwiększony promień zewnętrzny dla idealnego looku premium */
+            border-radius: 48px;
             pointer-events: none; 
         }
 
@@ -51,6 +51,7 @@
             z-index: 2;
         }
 
+        /* Wolno płynące, trójkolorowe światło (3/4 obwodu) */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -58,15 +59,15 @@
                 from 0deg,
                 transparent 0%,
                 transparent 15%,
-                rgba(30, 80, 255, 0.9) 30%,   
-                rgba(160, 40, 255, 0.9) 50%,  
-                rgba(255, 0, 127, 0.9) 70%,   
-                rgba(255, 185, 70, 0.9) 85%,  
+                rgba(30, 80, 255, 0.95) 30%,   
+                rgba(160, 40, 255, 0.95) 55%,  
+                rgba(255, 0, 127, 0.95) 75%,   
+                rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            filter: blur(45px);
+            filter: blur(40px);
             animation: 
-                spin-sweep 12s linear infinite, 
+                spin-sweep 14s linear infinite, 
                 pulse-opacity 4s ease-in-out infinite alternate;
         }
 
@@ -76,30 +77,34 @@
             background: conic-gradient(
                 from 180deg,
                 transparent 0%,
-                rgba(0, 255, 240, 0.3) 20%,
-                transparent 40%
+                rgba(0, 255, 240, 0.25) 25%,
+                transparent 50%
             );
-            filter: blur(50px);
-            animation: spin-sweep-reverse 18s linear infinite;
+            filter: blur(45px);
+            animation: spin-sweep-reverse 20s linear infinite;
         }
 
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
         @keyframes pulse-opacity {
-            0% { opacity: 0.5; transform: scale(1); }
-            100% { opacity: 1; transform: scale(1.05); }
+            0% { opacity: 0.4; transform: scale(0.98); }
+            100% { opacity: 0.9; transform: scale(1.03); }
         }
 
-        /* --- NAPRAWIONY CZARNY RDZEŃ --- */
+        /* --- PERFEKCYJNIE ZAGRAŻDŻONY CZARNY RDZEŃ (ZASADA APPLE) --- */
         #layer-dark-core {
             position: absolute;
-            /* Odsunięcie od krawędzi (grubość światła) */
-            inset: 30px; 
+            inset: 24px; /* Dystans od krawędzi zewnętrznej */
             background: #000000;
-            /* Magiczny wzór: R_zewn (36) - dystans (30) = R_wewn (6) */
-            border-radius: 6px; 
-            /* Potężny, bardzo miękki rozlewający się cień. Zero ostrych odcięć! */
-            box-shadow: 0 0 50px 25px #000000; 
+            /* Wzór: R_zewn (48px) - dystans (24px) = R_wewn (24px) */
+            border-radius: 24px; 
+            
+            /* Wyeliminowany SPREAD. Używamy warstw miękkich blurów wewnątrz i na zewnątrz,
+               co daje idealnie dymne przejście bez deformowania geometrii narożnika. */
+            box-shadow: 
+                0 0 35px #000000, 
+                0 0 15px #000000, 
+                inset 0 0 25px #000000; 
             z-index: 3;
         }
 
@@ -163,106 +168,52 @@
             transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
         }
 
-        /* --- ZELKOWY ONBOARDING POPUP --- */
+        /* --- UI: ONBOARDING POPUP --- */
         #onboarding-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
+            position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
         }
-        
         #onboarding-overlay.show { opacity: 1; pointer-events: auto; }
-
         #onboarding-box {
-            background: rgba(20, 20, 25, 0.75);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
-            width: 85%;
-            max-width: 340px;
-            padding: 35px 25px;
-            text-align: center;
-            color: #fff;
-            transform: scale(0.1);
-            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-            opacity: 0;
+            background: rgba(20, 20, 25, 0.75); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
+            width: 85%; max-width: 340px; padding: 35px 25px; text-align: center; color: #fff;
+            transform: scale(0.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; opacity: 0;
         }
-
-        #onboarding-overlay.show #onboarding-box {
-            animation: jelly-morph 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-
+        #onboarding-overlay.show #onboarding-box { animation: jelly-morph 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
         @keyframes jelly-morph {
             0% { transform: scale(0.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; opacity: 0; }
             40% { transform: scale(1.1); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; opacity: 1; }
             70% { transform: scale(0.95); border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; }
             100% { transform: scale(1); border-radius: 32px; opacity: 1; }
         }
-
         #onboarding-content { opacity: 0; transform: translateY(10px); }
         #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
         @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
-
-        #onboarding-box h2 {
-            font-size: 22px; font-weight: 700; margin-bottom: 15px;
-            background: linear-gradient(135deg, #fff, #aaa);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
+        #onboarding-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #onboarding-box p { font-size: 15px; color: #ccc; margin-bottom: 25px; line-height: 1.5; font-weight: 400; }
         #onboarding-box ol { text-align: left; margin-bottom: 25px; padding-left: 20px; color: #ddd; font-size: 14px; line-height: 1.6; }
         #onboarding-box li { margin-bottom: 8px; }
-
-        #onboarding-btn {
-            background: #fff; color: #000; border: none; padding: 14px 30px;
-            border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer;
-            width: 100%; transition: transform 0.2s, background 0.2s;
-        }
+        #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
         /* --- UI: PRZYCISK INSTALACJI PWA --- */
         #install-btn {
-            position: absolute;
-            bottom: max(env(safe-area-inset-bottom), 30px);
-            right: max(env(safe-area-inset-right), 30px);
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 200; 
-            display: none; 
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: background 0.2s, color 0.2s;
+            position: absolute; bottom: max(env(safe-area-inset-bottom), 30px); right: max(env(safe-area-inset-right), 30px);
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 10px 20px;
+            font-size: 14px; font-weight: 500; z-index: 200; display: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: background 0.2s, color 0.2s;
         }
         #install-btn:active { background: rgba(255, 255, 255, 0.2); color: #fff; }
-
         #install-modal {
-            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            z-index: 300; display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            z-index: 300; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
         #install-modal.show { opacity: 1; pointer-events: auto; }
         .modal-content {
-            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
-            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
+            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #install-modal.show .modal-content { transform: translateY(0); }
         .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
