@@ -29,6 +29,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
+        /* PERFEKCYJNA GEOMETRIA SQUIRCLE (Standard Apple) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -50,7 +51,7 @@
             z-index: 2;
         }
 
-        /* --- ORGANICZNA, ZMIENNA MGŁA BRZEGOWA --- */
+        /* TAJEMNICZA MGŁA BRZEGOWA (3/4 OBWODU) - Zredukowany blur dla węższego efektu */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -64,10 +65,10 @@
                 rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            /* Animacja pulsowania steruje teraz także przesunięciem palety barw (hue-rotate) */
+            filter: blur(25px); /* Zmniejszone rozmycie skupia światło bliżej krawędzi */
             animation: 
                 spin-sweep 14s linear infinite, 
-                organic-pulse 5s ease-in-out infinite alternate;
+                pulse-opacity 4s ease-in-out infinite alternate;
         }
 
         .sweeping-light-dim {
@@ -79,24 +80,24 @@
                 rgba(0, 255, 240, 0.25) 25%,
                 transparent 50%
             );
-            animation: spin-sweep-reverse 20s linear infinite, organic-pulse 7s ease-in-out infinite alternate-reverse;
+            filter: blur(30px);
+            animation: spin-sweep-reverse 20s linear infinite;
         }
 
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
-        
-        /* ODDYCHANIE KOLORÓW: Mgła zmienia jasność, wielkość i płynnie przesuwa kolory po kole barw */
-        @keyframes organic-pulse {
-            0% { opacity: 0.4; transform: scale(0.98); filter: blur(25px) hue-rotate(0deg) brightness(1); }
-            100% { opacity: 0.9; transform: scale(1.02); filter: blur(25px) hue-rotate(45deg) brightness(1.3); }
+        @keyframes pulse-opacity {
+            0% { opacity: 0.4; transform: scale(0.98); }
+            100% { opacity: 0.9; transform: scale(1.02); }
         }
 
+        /* --- SKORYGOWANY WĄSKI RDZEŃ (ZASADA APPLE KONCENTRYCZNOŚCI) --- */
         #layer-dark-core-soft {
             position: absolute;
-            inset: 12px; 
+            inset: 12px; /* Szerokość światła zmniejszona o połowę (było 24px) */
             background: #000000;
-            border-radius: 36px; 
-            filter: blur(8px); 
+            border-radius: 36px; /* WZÓR: R_zewn (48px) - dystans (12px) = R_wewn (36px) */
+            filter: blur(8px); /* Delikatne dymne wygaszenie bez zniekształcania rogów */
             z-index: 3;
         }
 
@@ -104,7 +105,7 @@
             position: absolute;
             inset: 22px; 
             background: #000000;
-            border-radius: 26px; 
+            border-radius: 26px; /* WZÓR: 48px - 22px = 26px */
             z-index: 3.5;
         }
 
@@ -121,7 +122,7 @@
             z-index: 5;
         }
 
-        /* --- MECHANIKA MGŁY PALCÓW --- */
+        /* --- FINGER FOG --- */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -130,8 +131,6 @@
             transform: translate(-50%, -50%) scale(0.1);
             opacity: 0; filter: brightness(1) blur(0px);
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, filter 0.6s ease;
-            /* Wymuszenie sprzętowego renderowania dla płynności */
-            will-change: transform, opacity;
         }
 
         .fog-visual {
@@ -157,20 +156,16 @@
             animation: winner-breathe 4s infinite alternate ease-in-out;
         }
 
-        /* --- NAPRAWIONE ZANIKANIE (Brak migotania/szatkowania w Safari) --- */
         .finger-fog.dispersing {
             transform: translate(-50%, -50%) scale(2.5) !important;
-            opacity: 0 !important; 
-            /* Tylko scale i opacity, bez filtra! */
-            transition: transform 1.5s ease-out, opacity 1.5s ease 0.2s !important;
+            opacity: 0 !important; filter: brightness(0.5) blur(30px) !important;
+            transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease !important;
         }
 
         .finger-fog.winner.dispersing {
-            /* Mniejsza skala (12) w zupełności zaleje ekran, nie dławiąc procesora */
-            transform: translate(-50%, -50%) scale(12) !important; 
-            opacity: 0 !important; 
-            /* Usunięto transition dla "filter". Opacity wygasa bardzo łagodnie po 0.5s przerwy */
-            transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), opacity 3s ease-in-out 0.5s !important; 
+            transform: translate(-50%, -50%) scale(15) !important; 
+            opacity: 0 !important; filter: brightness(2.5) blur(30px) !important;
+            transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
         }
 
         /* --- UI: ONBOARDING JELLY POPUP --- */
@@ -203,7 +198,7 @@
         #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* --- UI: INSTALL ARROW ICON --- */
+        /* --- UI: PURE MINIMALIST ARROW ICON (NO CONTAINER) --- */
         #install-btn {
             position: absolute; 
             bottom: max(env(safe-area-inset-bottom), 30px); 
@@ -317,6 +312,7 @@
             return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
+        // NOWOŚĆ: Funkcja rotująca punkt startowy mroku o losowy kąt
         function randomizeGlowPosition() {
             const pivot = document.getElementById('light-pivot');
             if (pivot) {
@@ -442,4 +438,73 @@
             e.preventDefault();
             if (isFinished) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch
+                const touch = e.changedTouches[i];
+                const touchId = String(touch.identifier);
+                if (activeTouches[touchId]) {
+                    activeTouches[touchId].x = getRelativePos(touch.clientX, touch.clientY).x;
+                    activeTouches[touchId].y = getRelativePos(touch.clientX, touch.clientY).y;
+                }
+            }
+            render();
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                delete activeTouches[String(e.changedTouches[i].identifier)];
+            }
+            render();
+            const remainingCount = Object.keys(activeTouches).length;
+            if (remainingCount === 0) {
+                isFinished = false; 
+                winnerId = null; 
+                activeTouches = {}; 
+                stopCountdown();
+                randomizeGlowPosition(); // NOWOŚĆ: Losujemy pozycję mroku przy każdym resecie planszy!
+            } else if (remainingCount < 2 && !isFinished) {
+                stopCountdown();
+            }
+        }
+
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+        // ONBOARDING
+        const onboardingOverlay = document.getElementById('onboarding-overlay');
+        const onboardingBtn = document.getElementById('onboarding-btn');
+
+        onboardingOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
+        onboardingOverlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
+        onboardingOverlay.addEventListener('touchend', (e) => e.stopPropagation(), { passive: false });
+
+        if (!localStorage.getItem('tutorialSeen')) {
+            setTimeout(() => { onboardingOverlay.classList.add('show'); }, 500);
+        }
+
+        onboardingBtn.addEventListener('click', () => {
+            onboardingOverlay.style.opacity = '0';
+            setTimeout(() => { onboardingOverlay.classList.remove('show'); }, 500); 
+            localStorage.setItem('tutorialSeen', 'true');
+        });
+
+        // PWA INSTALLATION
+        const installBtn = document.getElementById('install-btn');
+        const installModal = document.getElementById('install-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'flex'; }
+
+        installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
+        closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
+        installModal.addEventListener('click', (e) => { if (e.target === installModal) installModal.classList.remove('show'); });
+
+        // Losowanie pozycji startowej przy pierwszym wejściu
+        randomizeGlowPosition();
+    </script>
+</body>
+</html>
