@@ -29,13 +29,13 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
+        /* BAZOWA WARSTWA: To ona nadaje główny kształt całemu ekranowi (48px to idealny squircle iPhone'a) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
             bottom: max(env(safe-area-inset-bottom), 12px);
             left: max(env(safe-area-inset-left), 12px);
             right: max(env(safe-area-inset-right), 12px);
-            /* Zwiększony promień zewnętrzny dla idealnego looku premium */
             border-radius: 48px;
             pointer-events: none; 
         }
@@ -51,7 +51,7 @@
             z-index: 2;
         }
 
-        /* Wolno płynące, trójkolorowe światło (3/4 obwodu) */
+        /* TAJEMNICZY NEON (Płynie po 3/4 krawędzi, reszta to ciemność) */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -65,46 +65,49 @@
                 rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            filter: blur(40px);
+            filter: blur(45px); /* Potężne rozmycie gubi ostre linie gradientu */
             animation: 
                 spin-sweep 14s linear infinite, 
-                pulse-opacity 4s ease-in-out infinite alternate;
+                pulse-opacity 5s ease-in-out infinite alternate;
         }
 
+        /* Druga, bardzo słaba poświata obracająca się w tył dla gęstszego mroku */
         .sweeping-light-dim {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
             background: conic-gradient(
                 from 180deg,
                 transparent 0%,
-                rgba(0, 255, 240, 0.25) 25%,
+                rgba(0, 255, 240, 0.3) 25%,
                 transparent 50%
             );
-            filter: blur(45px);
+            filter: blur(50px);
             animation: spin-sweep-reverse 20s linear infinite;
         }
 
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
         @keyframes pulse-opacity {
-            0% { opacity: 0.4; transform: scale(0.98); }
-            100% { opacity: 0.9; transform: scale(1.03); }
+            0% { opacity: 0.5; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1.02); }
         }
 
-        /* --- PERFEKCYJNIE ZAGRAŻDŻONY CZARNY RDZEŃ (ZASADA APPLE) --- */
+        /* --- PERFEKCYJNIE OBLICZONY CZARNY RDZEŃ (ZASADA KONCENTRYCZNOŚCI APPLE) --- */
         #layer-dark-core {
             position: absolute;
-            inset: 24px; /* Dystans od krawędzi zewnętrznej */
+            /* Ukrywamy środek 34px od krawędzi */
+            inset: 34px; 
             background: #000000;
-            /* Wzór: R_zewn (48px) - dystans (24px) = R_wewn (24px) */
-            border-radius: 24px; 
             
-            /* Wyeliminowany SPREAD. Używamy warstw miękkich blurów wewnątrz i na zewnątrz,
-               co daje idealnie dymne przejście bez deformowania geometrii narożnika. */
+            /* MATEMATYKA: PromieńZewn(48px) - Odsunięcie(34px) = PromieńWewn(14px) */
+            border-radius: 14px; 
+            
+            /* Zamiast masek używamy rozrostu cienia (spread). 
+               Spread o wartości 12px i 16px rozrasta się matematycznie co do piksela,
+               tworząc idealnie miękki, aksamitny i równoległy spadek jasności! */
             box-shadow: 
-                0 0 35px #000000, 
-                0 0 15px #000000, 
-                inset 0 0 25px #000000; 
+                0 0 25px 12px #000000, 
+                0 0 50px 16px #000000; 
             z-index: 3;
         }
 
@@ -250,14 +253,14 @@
     <div id="onboarding-overlay">
         <div id="onboarding-box">
             <div id="onboarding-content">
-                <h2>How to Play</h2>
-                <p>Welcome! Gather your friends and follow these simple steps:</p>
+                <h2>Jak grać?</h2>
+                <p>Zbierz znajomych wokół telefonu i postępuj zgodnie z instrukcją:</p>
                 <ol>
-                    <li>Everyone places <b>one finger</b> on the screen.</li>
-                    <li>Wait for the glowing rings to sync.</li>
-                    <li>The last illuminated finger is the winner!</li>
+                    <li>Każdy gracz kładzie <b>jeden palec</b> na ekranie.</li>
+                    <li>Poczekajcie, aż wirtualne obręcze zsynchronizują pulsowanie.</li>
+                    <li>Gracz, pod którego palcem zapali się światło – wygrywa!</li>
                 </ol>
-                <button id="onboarding-btn">Let's Play!</button>
+                <button id="onboarding-btn">Zaczynamy!</button>
             </div>
         </div>
     </div>
