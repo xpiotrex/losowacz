@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
-    <title>Losowanie Gracza</title>
+    <title>Finger Selector</title>
     <style>
         * {
             box-sizing: border-box;
@@ -29,7 +29,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* BAZOWA WARSTWA: To ona nadaje główny kształt całemu ekranowi (48px to idealny squircle iPhone'a) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -51,7 +50,6 @@
             z-index: 2;
         }
 
-        /* TAJEMNICZY NEON (Płynie po 3/4 krawędzi, reszta to ciemność) */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -65,49 +63,41 @@
                 rgba(255, 185, 70, 0.95) 90%,  
                 transparent 100%
             );
-            filter: blur(45px); /* Potężne rozmycie gubi ostre linie gradientu */
+            filter: blur(40px);
             animation: 
                 spin-sweep 14s linear infinite, 
-                pulse-opacity 5s ease-in-out infinite alternate;
+                pulse-opacity 4s ease-in-out infinite alternate;
         }
 
-        /* Druga, bardzo słaba poświata obracająca się w tył dla gęstszego mroku */
         .sweeping-light-dim {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
             background: conic-gradient(
                 from 180deg,
                 transparent 0%,
-                rgba(0, 255, 240, 0.3) 25%,
+                rgba(0, 255, 240, 0.25) 25%,
                 transparent 50%
             );
-            filter: blur(50px);
+            filter: blur(45px);
             animation: spin-sweep-reverse 20s linear infinite;
         }
 
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
         @keyframes pulse-opacity {
-            0% { opacity: 0.5; transform: scale(0.98); }
-            100% { opacity: 1; transform: scale(1.02); }
+            0% { opacity: 0.4; transform: scale(0.98); }
+            100% { opacity: 0.9; transform: scale(1.03); }
         }
 
-        /* --- PERFEKCYJNIE OBLICZONY CZARNY RDZEŃ (ZASADA KONCENTRYCZNOŚCI APPLE) --- */
         #layer-dark-core {
             position: absolute;
-            /* Ukrywamy środek 34px od krawędzi */
-            inset: 34px; 
+            inset: 24px; 
             background: #000000;
-            
-            /* MATEMATYKA: PromieńZewn(48px) - Odsunięcie(34px) = PromieńWewn(14px) */
-            border-radius: 14px; 
-            
-            /* Zamiast masek używamy rozrostu cienia (spread). 
-               Spread o wartości 12px i 16px rozrasta się matematycznie co do piksela,
-               tworząc idealnie miękki, aksamitny i równoległy spadek jasności! */
+            border-radius: 24px; 
             box-shadow: 
-                0 0 25px 12px #000000, 
-                0 0 50px 16px #000000; 
+                0 0 35px #000000, 
+                0 0 15px #000000, 
+                inset 0 0 25px #000000; 
             z-index: 3;
         }
 
@@ -124,7 +114,7 @@
             z-index: 5;
         }
 
-        /* --- MECHANIKA MGŁY PALCÓW --- */
+        /* --- FINGER FOG MECHANICS --- */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -154,7 +144,7 @@
             transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1), opacity 3s ease, filter 3s ease;
         }
         .finger-fog.winner .fog-visual {
-            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.2) 50%, rgba(0,0,0,0) 80%);
+            background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(0,0,0,0) 80%);
             animation: winner-breathe 4s infinite alternate ease-in-out;
         }
         @keyframes winner-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
@@ -171,7 +161,7 @@
             transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
         }
 
-        /* --- UI: ONBOARDING POPUP --- */
+        /* --- JELLY ONBOARDING POPUP (ENGLISH) --- */
         #onboarding-overlay {
             position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
             background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -194,6 +184,7 @@
         #onboarding-content { opacity: 0; transform: translateY(10px); }
         #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
         @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
+        
         #onboarding-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #onboarding-box p { font-size: 15px; color: #ccc; margin-bottom: 25px; line-height: 1.5; font-weight: 400; }
         #onboarding-box ol { text-align: left; margin-bottom: 25px; padding-left: 20px; color: #ddd; font-size: 14px; line-height: 1.6; }
@@ -201,22 +192,52 @@
         #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* --- UI: PRZYCISK INSTALACJI PWA --- */
+        /* --- UI: MINIMALIST GRAY ARROW BUTTON --- */
         #install-btn {
-            position: absolute; bottom: max(env(safe-area-inset-bottom), 30px); right: max(env(safe-area-inset-right), 30px);
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 10px 20px;
-            font-size: 14px; font-weight: 500; z-index: 200; display: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: background 0.2s, color 0.2s;
+            position: absolute; 
+            bottom: max(env(safe-area-inset-bottom), 30px); 
+            right: max(env(safe-area-inset-right), 30px);
+            background: rgba(255, 255, 255, 0.08); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 50%; 
+            width: 44px; 
+            height: 44px;
+            display: none; /* Pokazywane przez JS tylko w Safari */
+            align-items: center; 
+            justify-content: center; 
+            z-index: 200; 
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            transition: background 0.2s, transform 0.2s;
         }
-        #install-btn:active { background: rgba(255, 255, 255, 0.2); color: #fff; }
+        #install-btn:active { background: rgba(255, 255, 255, 0.18); transform: scale(0.95); }
+        
+        /* Szara strzałeczka pobierania */
+        #install-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.5);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* --- UI: INSTALLATION MODAL (ENGLISH) --- */
         #install-modal {
-            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            z-index: 300; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            z-index: 300; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
         #install-modal.show { opacity: 1; pointer-events: auto; }
         .modal-content {
-            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
-            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background: rgba(25, 25, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px; padding: 30px; width: 80%; max-width: 320px;
+            text-align: center; color: #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #install-modal.show .modal-content { transform: translateY(0); }
         .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
@@ -234,33 +255,37 @@
     </div>
     
     <div class="layer" id="layer-dark-core"></div>
-    
     <div class="layer" id="layer-glass-edge"></div>
     <div class="layer" id="layer-canvas"></div>
 
-    <button id="install-btn">Zainstaluj Apkę</button>
+    <button id="install-btn">
+        <svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+    </button>
 
     <div id="install-modal">
         <div class="modal-content">
-            <h3>Zainstaluj na pulpicie</h3>
-            <p>Aby gra działała na pełnym ekranie i bez paska adresu:</p>
-            <p>1. Kliknij ikonę <b>Udostępnij</b> na dolnym pasku (kwadrat ze strzałką).</p>
-            <p>2. Wybierz opcję <br><b>"Do ekranu początkowego"</b></p>
-            <button class="close-modal" id="close-modal-btn">Zrozumiałem</button>
+            <h3>Install App</h3>
+            <p>To run this game in full screen without the browser bar:</p>
+            <p>1. Tap the <b>Share</b> button in the bottom bar (square with an up arrow).</p>
+            <p>2. Scroll down and select <br><b>"Add to Home Screen"</b></p>
+            <button class="close-modal" id="close-modal-btn">Got it</button>
         </div>
     </div>
 
     <div id="onboarding-overlay">
         <div id="onboarding-box">
             <div id="onboarding-content">
-                <h2>Jak grać?</h2>
-                <p>Zbierz znajomych wokół telefonu i postępuj zgodnie z instrukcją:</p>
+                <h2>How to Play</h2>
+                <p>Gather your friends around the screen and follow these simple steps:</p>
                 <ol>
-                    <li>Każdy gracz kładzie <b>jeden palec</b> na ekranie.</li>
-                    <li>Poczekajcie, aż wirtualne obręcze zsynchronizują pulsowanie.</li>
-                    <li>Gracz, pod którego palcem zapali się światło – wygrywa!</li>
+                    <li>Everyone places <b>one finger</b> on the screen.</li>
+                    <li>Wait for the cosmic mist to sync its rhythm.</li>
+                    <li>The last illuminated expanding aura is the winner!</li>
                 </ol>
-                <button id="onboarding-btn">Zaczynamy!</button>
+                <button id="onboarding-btn">Let's Play!</button>
             </div>
         </div>
     </div>
@@ -429,7 +454,7 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-        // LOGIKA ONBOARDINGU
+        // ONBOARDING LOGIC
         const onboardingOverlay = document.getElementById('onboarding-overlay');
         const onboardingBtn = document.getElementById('onboarding-btn');
 
@@ -447,7 +472,7 @@
             localStorage.setItem('tutorialSeen', 'true');
         });
 
-        // LOGIKA INSTALACJI PWA
+        // PWA INSTALLATION LOGIC
         const installBtn = document.getElementById('install-btn');
         const installModal = document.getElementById('install-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -455,7 +480,8 @@
         const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
 
-        if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'block'; }
+        // Wyświetlaj strzałkę flex-boxem tylko w przeglądarce Safari
+        if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'flex'; }
 
         installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
         closeModalBtn.addEventListener('click', () => { installModal.classList.remove('show'); });
