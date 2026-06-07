@@ -6,7 +6,8 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png"> <title>Losowanie Gracza</title>
+    <link rel="apple-touch-icon" href="icon.png">
+    <title>Losowanie Gracza</title>
     <style>
         * {
             box-sizing: border-box;
@@ -38,79 +39,72 @@
             pointer-events: none; 
         }
 
-        /* WARSTWA 1: Tło ambientowe */
         #layer-ambient { overflow: hidden; }
         .ambient-glow {
             position: absolute;
             border-radius: 50%;
             filter: blur(50px); 
-            opacity: 0.75; 
-            animation: float 10s infinite alternate ease-in-out;
+            opacity: 0.6; 
+            animation: float 12s infinite alternate ease-in-out;
         }
-        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #FF007F; animation-delay: 0s; }
-        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #00FFF0; animation-delay: -3s; }
-        .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #7B2CBF; animation-delay: -6s; }
+        .glow-1 { top: -10%; left: -10%; width: 60%; height: 60%; background: #4183FF; animation-delay: 0s; }
+        .glow-2 { bottom: -15%; right: -10%; width: 70%; height: 70%; background: #E049FF; animation-delay: -3s; }
+        .glow-3 { top: 30%; left: 60%; width: 60%; height: 60%; background: #FFB946; animation-delay: -6s; }
 
         @keyframes float {
-            0% { transform: scale(0.8) translate(0, 0); opacity: 0.3; }
-            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.8; }
-            100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.4; }
+            0% { transform: scale(0.8) translate(0, 0); opacity: 0.2; }
+            50% { transform: scale(1.3) translate(5%, -5%); opacity: 0.6; }
+            100% { transform: scale(0.9) translate(-5%, 5%); opacity: 0.3; }
         }
 
-        /* WARSTWA 2: Szkło */
         #layer-glass {
-            background: rgba(12, 12, 15, 0.4);
+            background: rgba(10, 10, 12, 0.5);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
         }
 
-        /* WARSTWA 3: Czarny rdzeń */
         #layer-dark-core {
-            background: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0) 100%);
+            background: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%);
         }
 
-        /* WARSTWA 4: Animowana ramka obrysowa - POPRAWIONA (Tajemnicza i pozbawiona bugów) */
-        #layer-border {
-            padding: 2px; 
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: destination-out;
-            mask-composite: exclude;
+        #layer-siri-glow {
             overflow: hidden;
+            -webkit-mask-image: radial-gradient(ellipse at center, transparent 75%, black 100%);
+            mask-image: radial-gradient(ellipse at center, transparent 75%, black 100%);
+            z-index: 3;
+            opacity: 0.8;
         }
-        .rotating-gradient {
+
+        .siri-gradient {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
-            /* Zwiększona paleta kolorów, płynniejsze przejścia */
             background: conic-gradient(
                 from 0deg,
-                transparent 0%,
-                rgba(0, 255, 240, 0.9) 15%,
-                rgba(123, 44, 191, 0.9) 30%,
-                rgba(255, 0, 127, 0.9) 50%,
-                rgba(255, 215, 0, 0.9) 70%,
-                transparent 85%
+                rgba(65, 131, 255, 0.8) 0%,   
+                rgba(224, 73, 255, 0.8) 25%,  
+                rgba(255, 114, 114, 0.8) 50%, 
+                rgba(255, 185, 70, 0.8) 75%,  
+                rgba(65, 131, 255, 0.8) 100%
             );
-            /* Ten blur sprawia, że krawędź nie ma graficznych "schodków" w Safari i wygląda jak tajemniczy neon */
-            filter: blur(6px); 
-            /* Spowolniona animacja dla bardziej relaksującego efektu */
-            animation: spin-border 6s linear infinite;
+            filter: blur(60px); 
+            animation: spin-siri 15s linear infinite;
         }
-        @keyframes spin-border { 100% { transform: rotate(360deg); } }
 
-        /* WARSTWA 5: Szklana krawędź boczna */
+        @keyframes spin-siri { 100% { transform: rotate(360deg); } }
+
         #layer-glass-edge {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03);
+            z-index: 4;
         }
 
-        /* WARSTWA 6: Pole gry */
         #layer-canvas {
             pointer-events: auto; 
             overflow: hidden; 
             transform: translateZ(0); 
+            z-index: 5;
         }
 
-        /* BAZA MGŁY PALCÓW */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -157,7 +151,129 @@
             transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
         }
 
-        /* --- UI: PRZYCISK INSTALACJI I MODAL --- */
+        /* --- ZELKOWY ONBOARDING POPUP --- */
+        #onboarding-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        #onboarding-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #onboarding-box {
+            background: rgba(20, 20, 25, 0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.05);
+            width: 85%;
+            max-width: 340px;
+            padding: 35px 25px;
+            text-align: center;
+            color: #fff;
+            
+            /* Stan początkowy przed animacją - mały żelek */
+            transform: scale(0.1);
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            opacity: 0;
+        }
+
+        /* Animacja formującego się glutka wprost w szkło */
+        #onboarding-overlay.show #onboarding-box {
+            animation: jelly-morph 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes jelly-morph {
+            0% { 
+                transform: scale(0.1); 
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; 
+                opacity: 0; 
+            }
+            40% { 
+                transform: scale(1.1); 
+                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; 
+                opacity: 1; 
+            }
+            70% { 
+                transform: scale(0.95); 
+                border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; 
+            }
+            100% { 
+                transform: scale(1); 
+                border-radius: 32px; /* Finalna twarda forma */
+                opacity: 1; 
+            }
+        }
+
+        /* Zawartość pojawia się dopiero, gdy szkło się uspokoi */
+        #onboarding-content {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        #onboarding-overlay.show #onboarding-content {
+            animation: fade-in-up 0.5s ease forwards 0.8s;
+        }
+
+        @keyframes fade-in-up {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #onboarding-box h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #onboarding-box p {
+            font-size: 15px;
+            color: #ccc;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        #onboarding-box ol {
+            text-align: left;
+            margin-bottom: 25px;
+            padding-left: 20px;
+            color: #ddd;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        #onboarding-box li { margin-bottom: 8px; }
+
+        #onboarding-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, background 0.2s;
+        }
+        #onboarding-btn:active { transform: scale(0.95); background: #eee; }
+
+        /* --- UI: PRZYCISK INSTALACJI PWA --- */
         #install-btn {
             position: absolute;
             bottom: max(env(safe-area-inset-bottom), 30px);
@@ -171,8 +287,8 @@
             padding: 10px 20px;
             font-size: 14px;
             font-weight: 500;
-            z-index: 200; /* Nad ekranem gry */
-            display: none; /* Domyślnie ukryte, pokazywane przez JS w Safari */
+            z-index: 200; 
+            display: none; 
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             transition: background 0.2s, color 0.2s;
@@ -193,10 +309,7 @@
             pointer-events: none;
             transition: opacity 0.3s ease;
         }
-        #install-modal.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        #install-modal.show { opacity: 1; pointer-events: auto; }
         .modal-content {
             background: rgba(25, 25, 30, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -213,16 +326,9 @@
         #install-modal.show .modal-content { transform: translateY(0); }
         .modal-content h3 { font-size: 18px; margin-bottom: 15px; font-weight: 600; }
         .modal-content p { font-size: 15px; color: #aaa; line-height: 1.5; margin-bottom: 20px; }
-        .modal-content svg { width: 30px; fill: #007AFF; margin: 10px 0; }
         .close-modal {
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 15px;
-            width: 100%;
+            background: #fff; color: #000; border: none; padding: 12px 24px;
+            border-radius: 16px; font-weight: 600; font-size: 15px; width: 100%;
         }
     </style>
 </head>
@@ -233,13 +339,15 @@
         <div class="ambient-glow glow-2"></div>
         <div class="ambient-glow glow-3"></div>
     </div>
+    
     <div class="layer" id="layer-glass"></div>
     <div class="layer" id="layer-dark-core"></div>
-    <div class="layer" id="layer-border">
-        <div class="rotating-gradient"></div>
+    
+    <div class="layer" id="layer-siri-glow">
+        <div class="siri-gradient"></div>
     </div>
+    
     <div class="layer" id="layer-glass-edge"></div>
-
     <div class="layer" id="layer-canvas"></div>
 
     <button id="install-btn">Zainstaluj Apkę</button>
@@ -254,8 +362,22 @@
         </div>
     </div>
 
+    <div id="onboarding-overlay">
+        <div id="onboarding-box">
+            <div id="onboarding-content">
+                <h2>How to Play</h2>
+                <p>Welcome! Gather your friends and follow these simple steps:</p>
+                <ol>
+                    <li>Everyone places <b>one finger</b> on the screen.</li>
+                    <li>Wait for the glowing rings to sync.</li>
+                    <li>The last illuminated finger is the winner!</li>
+                </ol>
+                <button id="onboarding-btn">Let's Play!</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // LOGIKA GRY
         const canvas = document.getElementById('layer-canvas');
         let activeTouches = {};
         let countdownTimer = null;
@@ -419,21 +541,42 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
+        // LOGIKA ONBOARDINGU (Tutorial pojawia się tylko raz)
+        const onboardingOverlay = document.getElementById('onboarding-overlay');
+        const onboardingBtn = document.getElementById('onboarding-btn');
+
+        // Zatrzymujemy eventy dotyku, żeby palce nie przebijały do gry podczas czytania instrukcji
+        onboardingOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
+        onboardingOverlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
+        onboardingOverlay.addEventListener('touchend', (e) => e.stopPropagation(), { passive: false });
+
+        if (!localStorage.getItem('tutorialSeen')) {
+            // Opóźnienie 500ms dla dramatycznego efektu pojawienia się
+            setTimeout(() => {
+                onboardingOverlay.classList.add('show');
+            }, 500);
+        }
+
+        onboardingBtn.addEventListener('click', () => {
+            onboardingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                onboardingOverlay.classList.remove('show');
+            }, 500); // Czeka na fade-out
+            localStorage.setItem('tutorialSeen', 'true');
+        });
+
         // LOGIKA INSTALACJI PWA
         const installBtn = document.getElementById('install-btn');
         const installModal = document.getElementById('install-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
 
-        // Funkcja sprawdzająca czy jesteśmy na iOS i czy apka nie jest jeszcze zainstalowana
         const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
 
-        // Pokaż przycisk tylko w Safari (nie w zainstalowanej PWA)
         if (isIos() && !isInStandaloneMode()) {
             installBtn.style.display = 'block';
         }
 
-        // Obsługa kliknięć
         installBtn.addEventListener('click', () => {
             installModal.classList.add('show');
         });
@@ -442,11 +585,9 @@
             installModal.classList.remove('show');
         });
 
-        // Ukryj modal przy kliknięciu w tło
         installModal.addEventListener('click', (e) => {
             if (e.target === installModal) installModal.classList.remove('show');
         });
-
     </script>
 </body>
 </html>
