@@ -35,25 +35,22 @@
             bottom: max(env(safe-area-inset-bottom), 12px);
             left: max(env(safe-area-inset-left), 12px);
             right: max(env(safe-area-inset-right), 12px);
+            /* Zewnętrzny promień to 36px */
             border-radius: 36px;
             pointer-events: none; 
         }
 
-        /* TŁO SZKLANE BAZOWE */
         #layer-glass {
             background: rgba(10, 10, 12, 0.4);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
         }
 
-        /* --- NOWOŚĆ: VOLUMETRIC EDGE GLOW --- */
-        /* Kontener przycina światło idealnie do rogów ekranu */
         #layer-edge-glow {
             overflow: hidden; 
             z-index: 2;
         }
 
-        /* Wędrujące światło. Obejmuje 3/4 koła (reszta to przezroczystość) */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -61,21 +58,18 @@
                 from 0deg,
                 transparent 0%,
                 transparent 15%,
-                rgba(30, 80, 255, 0.9) 30%,   /* Głęboki błękit */
-                rgba(160, 40, 255, 0.9) 50%,  /* Fiolet */
-                rgba(255, 0, 127, 0.9) 70%,   /* Tajemniczy róż */
-                rgba(255, 185, 70, 0.9) 85%,  /* Bursztyn na czele */
+                rgba(30, 80, 255, 0.9) 30%,   
+                rgba(160, 40, 255, 0.9) 50%,  
+                rgba(255, 0, 127, 0.9) 70%,   
+                rgba(255, 185, 70, 0.9) 85%,  
                 transparent 100%
             );
-            /* Potężny blur zamienia ostre krawędzie w płynną chmurę neonu */
             filter: blur(45px);
-            /* Animacja rotacji + tajemnicze pulsowanie (oddychanie) */
             animation: 
                 spin-sweep 12s linear infinite, 
                 pulse-opacity 4s ease-in-out infinite alternate;
         }
 
-        /* Druga, malutka i bardzo delikatna poświata kręcąca się w drugą stronę dla mroku */
         .sweeping-light-dim {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -96,27 +90,25 @@
             100% { opacity: 1; transform: scale(1.05); }
         }
 
-        /* --- NOWY, PERFEKCYJNY CZARNY RDZEŃ --- */
-        /* Zamiast maski elipsy stosujemy fizyczny, czarny box wewnątrz, 
-           który rzuca potężny miękki cień. Dzięki temu światło układa się
-           idealnie równo wzdłuż wszystkich prostych krawędzi! */
+        /* --- NAPRAWIONY CZARNY RDZEŃ --- */
         #layer-dark-core {
             position: absolute;
-            inset: 22px; /* Dystans od krawędzi – decyduje o grubości światła */
+            /* Odsunięcie od krawędzi (grubość światła) */
+            inset: 30px; 
             background: #000000;
-            border-radius: 20px; /* Nieco mniejszy promień dla wnętrza */
-            box-shadow: 0 0 35px 15px #000000; /* Rozmywa czerń płynnie do samej krawędzi */
+            /* Magiczny wzór: R_zewn (36) - dystans (30) = R_wewn (6) */
+            border-radius: 6px; 
+            /* Potężny, bardzo miękki rozlewający się cień. Zero ostrych odcięć! */
+            box-shadow: 0 0 50px 25px #000000; 
             z-index: 3;
         }
 
-        /* Szklana krawędź boczna (refleks szkła) */
         #layer-glass-edge {
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03);
             z-index: 4;
         }
 
-        /* WARSTWA GRY */
         #layer-canvas {
             pointer-events: auto; 
             overflow: hidden; 
