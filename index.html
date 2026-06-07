@@ -29,6 +29,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
+        /* GŁÓWNA GEOMETRIA OKNA (Złoty standard krzywizny iPhone'a) */
         .layer {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -50,6 +51,7 @@
             z-index: 2;
         }
 
+        /* TAJEMNICZA MGŁA BRZEGOWA (3/4 obwodu) */
         .sweeping-light {
             position: absolute;
             top: -50%; left: -50%; width: 200%; height: 200%;
@@ -85,20 +87,27 @@
         @keyframes spin-sweep { 100% { transform: rotate(360deg); } }
         @keyframes spin-sweep-reverse { 100% { transform: rotate(-360deg); } }
         @keyframes pulse-opacity {
-            0% { opacity: 0.4; transform: scale(0.98); }
-            100% { opacity: 0.9; transform: scale(1.03); }
+            0% { opacity: 0.5; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1.02); }
         }
 
-        #layer-dark-core {
+        /* --- KONCENTRYCZNY RDZEŃ KORYGUJĄCY BŁĘDY SAFARI --- */
+        /* Użycie czystego filtra blur() na warstwach zamiast box-shadow całkowicie eliminuję deformację rogów */
+        #layer-dark-core-soft {
             position: absolute;
             inset: 24px; 
             background: #000000;
-            border-radius: 24px; 
-            box-shadow: 
-                0 0 35px #000000, 
-                0 0 15px #000000, 
-                inset 0 0 25px #000000; 
+            border-radius: 24px; /* MATEMATYKA: 48px - 24px = 24px (Perfekcyjna współśrodkowość) */
+            filter: blur(14px); /* Płynne, równe rozmycie bez efektu jajka */
             z-index: 3;
+        }
+
+        #layer-dark-core-solid {
+            position: absolute;
+            inset: 44px; 
+            background: #000000;
+            border-radius: 4px; /* MATEMATYKA: 48px - 44px = 4px */
+            z-index: 3.5;
         }
 
         #layer-glass-edge {
@@ -114,7 +123,7 @@
             z-index: 5;
         }
 
-        /* --- FINGER FOG MECHANICS --- */
+        /* --- MECHANIKA GRY --- */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -147,7 +156,6 @@
             background: radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(var(--glow-rgb), 0.9) 20%, rgba(var(--glow-rgb), 0.3) 50%, rgba(0,0,0,0) 80%);
             animation: winner-breathe 4s infinite alternate ease-in-out;
         }
-        @keyframes winner-breathe { 0% { transform: scale(0.95); } 100% { transform: scale(1.05); } }
 
         .finger-fog.dispersing {
             transform: translate(-50%, -50%) scale(2.5) !important;
@@ -161,7 +169,7 @@
             transition: transform 1.5s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out 1s !important; 
         }
 
-        /* --- JELLY ONBOARDING POPUP (ENGLISH) --- */
+        /* --- UI: ONBOARDING JELLY POPUP --- */
         #onboarding-overlay {
             position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
             background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -184,7 +192,6 @@
         #onboarding-content { opacity: 0; transform: translateY(10px); }
         #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
         @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
-        
         #onboarding-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 15px; background: linear-gradient(135deg, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #onboarding-box p { font-size: 15px; color: #ccc; margin-bottom: 25px; line-height: 1.5; font-weight: 400; }
         #onboarding-box ol { text-align: left; margin-bottom: 25px; padding-left: 20px; color: #ddd; font-size: 14px; line-height: 1.6; }
@@ -192,40 +199,34 @@
         #onboarding-btn { background: #fff; color: #000; border: none; padding: 14px 30px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
         #onboarding-btn:active { transform: scale(0.95); background: #eee; }
 
-        /* --- UI: MINIMALIST GRAY ARROW BUTTON --- */
+        /* --- UI: MINIMALIST BARE ARROW ICON (NO CIRCLE) --- */
         #install-btn {
             position: absolute; 
             bottom: max(env(safe-area-inset-bottom), 30px); 
             right: max(env(safe-area-inset-right), 30px);
-            background: rgba(255, 255, 255, 0.08); 
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15); 
-            border-radius: 50%; 
-            width: 44px; 
-            height: 44px;
-            display: none; /* Pokazywane przez JS tylko w Safari */
+            background: none;
+            border: none;
+            padding: 10px;
+            display: none; 
             align-items: center; 
             justify-content: center; 
             z-index: 200; 
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
-            transition: background 0.2s, transform 0.2s;
         }
-        #install-btn:active { background: rgba(255, 255, 255, 0.18); transform: scale(0.95); }
         
-        /* Szara strzałeczka pobierania */
         #install-btn svg {
-            width: 20px;
-            height: 20px;
+            width: 26px;
+            height: 26px;
             fill: none;
-            stroke: rgba(255, 255, 255, 0.5);
+            stroke: rgba(255, 255, 255, 0.35); /* Elegancka szarość */
             stroke-width: 2.5;
             stroke-linecap: round;
             stroke-linejoin: round;
+            transition: stroke 0.2s, transform 0.2s;
         }
-
-        /* --- UI: INSTALLATION MODAL (ENGLISH) --- */
+        #install-btn:active svg { stroke: rgba(255, 255, 255, 0.75); transform: scale(0.9); }
+        
+        /* --- UI: INSTALLATION MODAL --- */
         #install-modal {
             position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -248,13 +249,14 @@
 <body>
 
     <div class="layer" id="layer-glass"></div>
-    
     <div class="layer" id="layer-edge-glow">
         <div class="sweeping-light"></div>
         <div class="sweeping-light-dim"></div>
     </div>
     
-    <div class="layer" id="layer-dark-core"></div>
+    <div class="layer" id="layer-dark-core-soft"></div>
+    <div class="layer" id="layer-dark-core-solid"></div>
+    
     <div class="layer" id="layer-glass-edge"></div>
     <div class="layer" id="layer-canvas"></div>
 
@@ -268,9 +270,9 @@
     <div id="install-modal">
         <div class="modal-content">
             <h3>Install App</h3>
-            <p>To run this game in full screen without the browser bar:</p>
-            <p>1. Tap the <b>Share</b> button in the bottom bar (square with an up arrow).</p>
-            <p>2. Scroll down and select <br><b>"Add to Home Screen"</b></p>
+            <p>To run this game in full screen without browser bars:</p>
+            <p>1. Tap the <b>Share</b> button in the bottom navigation bar (square with an arrow pointing up).</p>
+            <p>2. Scroll down the menu and choose <br><b>"Add to Home Screen"</b></p>
             <button class="close-modal" id="close-modal-btn">Got it</button>
         </div>
     </div>
@@ -281,9 +283,9 @@
                 <h2>How to Play</h2>
                 <p>Gather your friends around the screen and follow these simple steps:</p>
                 <ol>
-                    <li>Everyone places <b>one finger</b> on the screen.</li>
-                    <li>Wait for the cosmic mist to sync its rhythm.</li>
-                    <li>The last illuminated expanding aura is the winner!</li>
+                    <li>Everyone places <b>one finger</b> on the interface.</li>
+                    <li>Wait a moment for the cosmic aura to synchronize its pulse.</li>
+                    <li>The chosen illuminated expanding mist reveals the winner!</li>
                 </ol>
                 <button id="onboarding-btn">Let's Play!</button>
             </div>
@@ -454,7 +456,7 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-        // ONBOARDING LOGIC
+        // ONBOARDING
         const onboardingOverlay = document.getElementById('onboarding-overlay');
         const onboardingBtn = document.getElementById('onboarding-btn');
 
@@ -472,7 +474,7 @@
             localStorage.setItem('tutorialSeen', 'true');
         });
 
-        // PWA INSTALLATION LOGIC
+        // PWA INSTALLATION
         const installBtn = document.getElementById('install-btn');
         const installModal = document.getElementById('install-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -480,7 +482,6 @@
         const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
 
-        // Wyświetlaj strzałkę flex-boxem tylko w przeglądarce Safari
         if (isIos() && !isInStandaloneMode()) { installBtn.style.display = 'flex'; }
 
         installBtn.addEventListener('click', () => { installModal.classList.add('show'); });
