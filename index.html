@@ -29,7 +29,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* POTĘŻNY VIEWPORT: Jedyna warstwa nadrzędna z perfekcyjnym, sprzętowym wycięciem kształtu */
+        /* VIEWPORT SQUIRCLE WITH HARD HARDWARE CLIP */
         .app-viewport {
             position: absolute;
             top: max(env(safe-area-inset-top), 12px);
@@ -37,31 +37,35 @@
             left: max(env(safe-area-inset-left), 12px);
             right: max(env(safe-area-inset-right), 12px);
             border-radius: 48px;
-            clip-path: inset(0 0 0 0 round 48px); /* Blokada uciekania jakichkolwiek duszka poza ekran */
+            clip-path: inset(0 0 0 0 round 48px); 
             background-color: #000000;
             overflow: hidden;
             transform: translateZ(0);
         }
 
-        /* WARSTWA EFEKTU ROZLANIA (FLOOD EFFECT) */
+        /* DYNAMICZNA WARSTWA ROZLANIA OD PUNKTU DOTYKU */
         .flood-overlay {
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle, rgba(var(--winner-rgb), 0.9) 0%, rgba(var(--winner-rgb), 0.3) 60%, transparent 100%);
+            /* Współrzędne i kolor wstrzykiwane dynamicznie przez JS */
+            background: radial-gradient(circle at var(--flood-x, 50%) var(--flood-y, 50%), rgba(var(--winner-rgb), 0.95) 0%, rgba(var(--winner-rgb), 0.4) 40%, transparent 100%);
             opacity: 0;
             z-index: 8;
             pointer-events: none;
-            transition: opacity 0.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+            transform: scale(0);
+            transition: opacity 0.4s cubic-bezier(0.1, 0.8, 0.2, 1), transform 0.5s cubic-bezier(0.1, 0.8, 0.2, 1);
         }
         .flood-overlay.active {
             opacity: 1;
+            transform: scale(3.5); /* Błyskawiczne rozepchnięcie gradientu na absolutnie cały ekran */
         }
         .flood-overlay.fade-out {
             opacity: 0;
-            transition: opacity 3.5s ease-in-out;
+            transform: scale(4);
+            transition: opacity 3.5s ease-in-out, transform 3.5s ease-in-out;
         }
 
-        /* SILNIK AMBIENTOWEGO ŚWIATŁA */
+        /* BACKGROUND NEON CYCLING */
         #light-pivot {
             position: absolute;
             inset: 0;
@@ -91,11 +95,11 @@
             100% { transform: rotate(360deg); filter: blur(25px) hue-rotate(360deg); }
         }
 
-        /* PERFEKCYJNY WĄSKI RDZEŃ (ZASADA WSPÓŁŚRODKOWOŚCI) */
+        /* CONCENTRIC CORES */
         .inner-core {
             position: absolute;
-            inset: 8px; /* Odpowiada za idealną grubość neonu */
-            border-radius: 40px; /* 48px - 8px = 40px */
+            inset: 8px; 
+            border-radius: 40px; 
             background: #000000;
             box-shadow: 0 0 25px 15px #000000;
             z-index: 2;
@@ -112,7 +116,7 @@
             z-index: 3;
         }
 
-        /* WARSTWA DETEKCJI DOTYKU */
+        /* INTERFACE CANVAS */
         #layer-canvas {
             position: absolute;
             inset: 0;
@@ -120,7 +124,7 @@
             z-index: 5;
         }
 
-        /* --- FINGER FOG (Obłoki pod palcami) --- */
+        /* FINGER FOGS */
         .finger-fog {
             position: absolute;
             width: 350px; height: 350px;
@@ -154,32 +158,30 @@
             animation: winner-breathe 4s infinite alternate ease-in-out;
         }
 
+        /* ROZPROSZENIE (Puszczenie palca gracza / zwycięzcy) */
         .finger-fog.dispersing {
             transform: translate(-50%, -50%) scale(2.5) !important;
             opacity: 0 !important; filter: brightness(0.5) blur(30px) !important;
             transition: transform 2s ease-out, opacity 1.5s ease 0.5s, filter 2s ease !important;
         }
+        .finger-fog.winner.dispersing {
+            transform: translate(-50%, -50%) scale(6) !important; 
+            opacity: 0 !important; filter: brightness(2.5) blur(40px) !important;
+            transition: transform 2s cubic-bezier(0.5, 0, 0.8, 1), filter 3.5s ease, opacity 3.5s ease-in-out !important; 
+        }
 
-        /* Minimalistyczny przycisk instalacji */
+        /* UI STRZAŁKA PWA */
         #install-btn {
             position: absolute; 
             bottom: max(env(safe-area-inset-bottom), 30px); 
             right: max(env(safe-area-inset-right), 30px);
-            background: none;
-            border: none;
-            padding: 10px;
-            display: none; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 200; 
-            cursor: pointer;
-            opacity: 0.35;
-            transition: opacity 0.2s, transform 0.2s;
+            background: none; border: none; padding: 10px; display: none; 
+            align-items: center; justify-content: center; z-index: 200; cursor: pointer;
+            opacity: 0.35; transition: opacity 0.2s, transform 0.2s;
         }
         #install-btn svg { width: 26px; height: 26px; fill: none; stroke: #ffffff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
         #install-btn:active { opacity: 0.8; transform: scale(0.9); }
         
-        /* OBRĘB MODALA I ONBOARDINGU */
         #install-modal, #onboarding-overlay {
             position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -202,7 +204,6 @@
             70% { transform: scale(0.95); border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; }
             100% { transform: scale(1); border-radius: 24px; opacity: 1; }
         }
-        
         #onboarding-content { opacity: 0; transform: translateY(10px); }
         #onboarding-overlay.show #onboarding-content { animation: fade-in-up 0.5s ease forwards 0.8s; }
         @keyframes fade-in-up { to { opacity: 1; transform: translateY(0); } }
@@ -223,9 +224,7 @@
         
         <div class="inner-core"></div>
         <div class="glass-edge"></div>
-
         <div id="layer-canvas"></div>
-
         <div id="flood-layer" class="flood-overlay"></div>
     </div>
 
@@ -263,16 +262,33 @@
     <script>
         const canvas = document.getElementById('layer-canvas');
         const floodLayer = document.getElementById('flood-layer');
+        
         let activeTouches = {};
         let countdownTimer = null;
         let isFinished = false;
         let winnerId = null;
         let currentStage = 0;
 
-        const colorsRGB = [
-            '0, 255, 240', '255, 0, 127', '123, 44, 191',  
-            '57, 255, 20', '255, 107, 0', '255, 215, 0', '0, 229, 255'    
+        // ROZSZERZONA PULA 7 ZDECYDOWANYCH, PREMIUM BARW RGB (Maks 5 graczy na raz na iPhone)
+        const baseColors = [
+            '0, 255, 240',   // Cyan
+            '255, 0, 127',   // Deep Magenta
+            '123, 44, 191',  // Neon Purple
+            '57, 255, 20',   // Lime Green
+            '255, 107, 0',   // Electric Orange
+            '255, 215, 0',   // Gold Yellow
+            '255, 34, 34'     // Fire Red
         ];
+        let shuffledColors = [];
+
+        // Algorytm mieszający kolory (Fisher-Yates Shuffle) - gwarancja unikalności
+        function shufflePuddle() {
+            shuffledColors = [...baseColors];
+            for (let i = shuffledColors.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledColors[i], shuffledColors[j]] = [shuffledColors[j], shuffledColors[i]];
+            }
+        }
 
         function getRelativePos(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
@@ -291,12 +307,17 @@
             const existingFogs = document.querySelectorAll('.finger-fog');
             existingFogs.forEach(fog => {
                 const touchId = fog.getAttribute('data-id');
-                if (!activeTouches[touchId] && fog.getAttribute('data-id') !== winnerId) {
+                
+                // Pętla sprzątająca nieaktywne palce
+                if (!activeTouches[touchId]) {
                     if (!fog.classList.contains('dispersing')) {
                         fog.classList.add('dispersing');
                         fog.removeAttribute('data-id'); 
-                        fog.removeAttribute('id'); // Klucz do naprawy recyklingu ID w iOS
-                        setTimeout(() => fog.remove(), 4500); 
+                        fog.removeAttribute('id'); // Przerywa pętlę recyklingu ID w WebKit Safari
+                        
+                        // Zwycięzca też dostaje timeout na fizyczne skasowanie z kodu, ale jego animacja dispersing trwa dłużej
+                        const isWinnerFog = fog.classList.contains('winner');
+                        setTimeout(() => fog.remove(), isWinnerFog ? 3500 : 4500); 
                     }
                 }
             });
@@ -385,15 +406,26 @@
         function handleTouchStart(e) {
             e.preventDefault();
             if (isFinished) return;
+            
+            // Losujemy i mieszamy kolory przy nowym rozdaniu na czystej planszy
+            if (Object.keys(activeTouches).length === 0) {
+                shufflePuddle();
+            }
+
             let anyNewFinger = false;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 const touchId = String(touch.identifier);
+                
                 if (!activeTouches[touchId]) {
+                    // Pobieramy absolutnie unikalny kolor ze świeżo przemieszanej puli
+                    const assignedColor = shuffledColors[Object.keys(activeTouches).length % shuffledColors.length];
+                    const pos = getRelativePos(touch.clientX, touch.clientY);
+                    
                     activeTouches[touchId] = {
-                        x: getRelativePos(touch.clientX, touch.clientY).x,
-                        y: getRelativePos(touch.clientX, touch.clientY).y,
-                        colorRGB: colorsRGB[Math.abs(touch.identifier) % colorsRGB.length]
+                        x: pos.x,
+                        y: pos.y,
+                        colorRGB: assignedColor
                     };
                     anyNewFinger = true;
                 }
@@ -409,8 +441,9 @@
                 const touch = e.changedTouches[i];
                 const touchId = String(touch.identifier);
                 if (activeTouches[touchId]) {
-                    activeTouches[touchId].x = getRelativePos(touch.clientX, touch.clientY).x;
-                    activeTouches[touchId].y = getRelativePos(touch.clientX, touch.clientY).y;
+                    const pos = getRelativePos(touch.clientX, touch.clientY);
+                    activeTouches[touchId].x = pos.x;
+                    activeTouches[touchId].y = pos.y;
                 }
             }
             render();
@@ -421,17 +454,21 @@
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const id = String(e.changedTouches[i].identifier);
                 
-                // Jeśli puszczany palec to zwycięzca – odpalamy potężną, kinową animację tła
+                // FIX 1 & 2: Dynamiczne wyliczenie punktu startu i zniknięcie zwycięzcy
                 if (id === winnerId) {
-                    const winnerColor = activeTouches[winnerId].colorRGB;
-                    floodLayer.style.setProperty('--winner-rgb', winnerColor);
+                    const winnerData = activeTouches[winnerId];
                     
+                    // Wstrzykujemy koordynaty palca zwycięzcy prosto do zmiennych CSS gradientu radialnego
+                    floodLayer.style.setProperty('--flood-x', `${winnerData.x}px`);
+                    floodLayer.style.setProperty('--flood-y', `${winnerData.y}px`);
+                    floodLayer.style.setProperty('--winner-rgb', winnerData.colorRGB);
+                    
+                    // Odpalamy eksplozję tła z punktu dotyku
                     floodLayer.className = 'flood-overlay active';
                     
-                    // Bezpieczna zmiana stanów animacji ucieczki światła do mroku
                     setTimeout(() => {
                         floodLayer.className = 'flood-overlay active fade-out';
-                    }, 100);
+                    }, 150);
                 }
                 
                 delete activeTouches[id];
@@ -447,7 +484,6 @@
                 stopCountdown();
                 randomizeGlowPosition(); 
                 
-                // Reset warstwy rozlania przy pełnym resecie planszy
                 setTimeout(() => {
                     if (!isFinished) floodLayer.className = 'flood-overlay';
                 }, 3500);
@@ -461,7 +497,7 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-        // ONBOARDING LOGIC
+        // ONBOARDING
         const onboardingOverlay = document.getElementById('onboarding-overlay');
         const onboardingBtn = document.getElementById('onboarding-btn');
 
@@ -479,7 +515,7 @@
             localStorage.setItem('tutorialSeen', 'true');
         });
 
-        // PWA INSTALLATION LOGIC
+        // PWA INSTALLATION
         const installBtn = document.getElementById('install-btn');
         const installModal = document.getElementById('install-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
